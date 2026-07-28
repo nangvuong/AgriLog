@@ -7,12 +7,19 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "echo \"No tests configured\""
+    "test": "echo \"No tests configured\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:restart": "docker compose down && docker compose up -d",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:logs": "docker compose logs -f postgres",
+    "db:psql": "docker compose exec -it postgres psql -U postgres -d agrilog_db"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -20,6 +27,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
     "eslint": "^9.0.0",
     "typescript": "^5.6.3"
   }
