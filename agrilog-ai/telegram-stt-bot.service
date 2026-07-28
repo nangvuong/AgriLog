@@ -1,0 +1,42 @@
+[Unit]
+Description=Telegram STT Bot (sherpa-onnx)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# --- Chỉnh 3 dòng dưới đây cho đúng với máy triển khai thực tế ---
+User=telegram-bot
+WorkingDirectory=/home/haithang/telegram-stt-bot
+ExecStart=/home/haithang/venv/speech2text/bin/python /home/haithang/telegram-stt-bot/main.py
+
+# Nạp biến môi trường từ file .env (đường dẫn tuyệt đối, không dùng %h ở đây)
+EnvironmentFile=/home/haithang/telegram-stt-bot/.env
+
+# Tự khởi động lại nếu process crash, chờ 5s trước khi restart
+Restart=on-failure
+RestartSec=5
+
+# Giới hạn số lần restart dồn dập để tránh vòng lặp lỗi vô hạn
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Timeout khi service không dừng đúng cách (SIGTERM -> SIGKILL)
+TimeoutStopSec=30
+
+# Ghi log ra journald (xem bằng: journalctl -u telegram-stt-bot -f)
+StandardOutput=journal
+StandardError=journal
+#SyslogIdentifier=telegram-stt-bot
+
+# --- Hardening cơ bản (có thể bỏ bớt nếu gây lỗi quyền truy cập ffmpeg/model) ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+# Cho phép ghi vào thư mục làm việc (chứa tmp/ để lưu file audio tạm)
+ReadWritePaths=/home/haithang/telegram-stt-bot
+
+[Install]
+WantedBy=multi-user.target
