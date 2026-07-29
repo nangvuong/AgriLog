@@ -1,4 +1,4 @@
-import { VaiTroNguoiDung } from '../enums/user-role.enum';
+import { VaiTroNguoiDung } from '../enums/user-role.enum.js';
 
 /**
  * Interface cho DTO Đăng nhập hệ thống

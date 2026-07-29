@@ -1,5 +1,5 @@
-import { TrangThaiLoBuoi } from '../enums/batch-status.enum';
-import { TieuChuanKiemDinh } from '../enums/standard.enum';
+import { TrangThaiLoBuoi } from '../enums/batch-status.enum.js';
+import { TieuChuanKiemDinh } from '../enums/standard.enum.js';
 
 /**
  * Interface DTO tạo lô bưởi canh tác & xuất khẩu mới

@@ -49,10 +49,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`w-full py-3 rounded-2xl border transition-all text-sm font-medium text-slate-800 bg-slate-50/50 outline-none placeholder:text-slate-400 ${
+            className={`w-full py-3.5 rounded-2xl border transition-all text-base sm:text-sm font-medium text-slate-800 bg-slate-50/50 outline-none placeholder:text-slate-400 ${
               leftIcon ? 'pl-11' : 'pl-4'
             } ${
-              rightElement ? 'pr-11' : 'pr-4'
+              rightElement ? 'pr-12' : 'pr-4'
             } ${
               error
                 ? 'border-rose-400 focus:border-rose-600 focus:ring-4 focus:ring-rose-100'

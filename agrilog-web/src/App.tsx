@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { AuthResponse, UserProfile } from 'agrilog-shared';
-import { Header } from './components/Header';
-import { HeroBanner } from './components/HeroBanner';
+import { HeroBanner, MobileHeroBanner } from './components/HeroBanner';
 import {
   ChangePasswordPage,
   LoginPage,
@@ -11,6 +10,11 @@ import {
 } from './pages/Auth';
 import { ShieldAlert } from 'lucide-react';
 
+/**
+ * App chính với cấu trúc Split-Screen Full-Viewport theo mẫu dang-nhap.html
+ * Bên trái 44% (.panel-brand) màu xanh rừng sâu #1F3A2E
+ * Bên phải 56% (.panel-form) nền giấy trắng ấm #FBF8F1
+ */
 export default function App() {
   const [activeTab, setActiveTab] = useState<
     'login' | 'register' | 'profile' | 'change-password'
@@ -18,6 +22,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string>('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [lang, setLang] = useState<'VN' | 'EN'>('VN');
 
   useEffect(() => {
     const savedToken = localStorage.getItem('agrilog_token');
@@ -65,15 +70,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50/70 via-white to-blue-50/60 text-slate-800 flex flex-col font-sans">
-      {/* Navbar */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
-
+    <div className="min-h-screen bg-[#FBF8F1] text-[#23301F] flex flex-col lg:flex-row font-sans overflow-x-hidden">
       {/* Floating Toast Notification */}
       <AnimatePresence>
         {toastMsg && (
@@ -81,106 +78,197 @@ export default function App() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-24 right-6 z-50 bg-slate-900/90 text-white px-5 py-3 rounded-2xl shadow-xl backdrop-blur-md border border-white/10 text-sm font-medium flex items-center gap-2"
+            className="fixed top-6 right-6 z-50 bg-[#1F3A2E] text-[#F5F2E8] px-5 py-3 rounded-2xl shadow-xl border border-[#D9A441]/40 text-sm font-semibold flex items-center gap-2"
           >
-            <span className="w-2 h-2 rounded-full bg-green-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
             <span>{toastMsg}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex items-center">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center">
-          {/* Left Side: Hero Artwork Banner */}
-          <HeroBanner />
+      {/* LEFT: BRAND PANEL (44% width on desktop, 100vh full-height split screen matching dang-nhap.html) */}
+      <aside className="hidden lg:block lg:w-[44%] xl:w-[42%] min-h-screen sticky top-0 flex-shrink-0">
+        <HeroBanner />
+      </aside>
 
-          {/* Right Side: Interactive Pages */}
-          <div className="w-full">
-            <AnimatePresence mode="wait">
-              {activeTab === 'login' && (
-                <LoginPage
-                  key="login"
-                  onLoginSuccess={handleLoginOrRegisterSuccess}
-                  onSwitchToRegister={() => setActiveTab('register')}
-                />
-              )}
+      {/* Mobile Top Header Banner (< lg) */}
+      <div className="lg:hidden w-full">
+        <MobileHeroBanner />
+      </div>
 
-              {activeTab === 'register' && (
-                <RegisterPage
-                  key="register"
-                  onRegisterSuccess={handleLoginOrRegisterSuccess}
-                  onSwitchToLogin={() => setActiveTab('login')}
-                />
-              )}
+      {/* RIGHT: FORM PANEL (56% width on desktop, 100vh full-height split screen) */}
+      <main className="flex-1 min-h-[calc(100vh-64px)] lg:min-h-screen bg-[#FBF8F1] text-[#23301F] flex flex-col justify-between p-4 sm:p-8 lg:p-14 relative">
+        {/* Top Right Bar: Lang Toggle & Auth Nav */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 pb-2.5 border-b border-[#E4DCC8]/50 sm:border-b-0">
+          <div className="sm:hidden text-xs font-bold text-[#1F3A2E] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+            <span>AgriLog GlobalGAP</span>
+          </div>
 
-              {activeTab === 'profile' && currentUser && (
-                <ProfilePage
-                  key="profile"
-                  user={currentUser}
-                  token={token}
-                  onUserUpdate={handleProfileUpdate}
-                  onLogout={handleLogout}
-                  onSwitchToChangePassword={() =>
-                    setActiveTab('change-password')
-                  }
-                />
-              )}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Lang Toggle (.lang-toggle from dang-nhap.html) */}
+            <div
+              className="flex gap-0.5 bg-[#F4F0E4] p-1 rounded-xl border border-[#E4DCC8] font-mono text-xs"
+              role="group"
+              aria-label="Ngôn ngữ"
+            >
+              <button
+                type="button"
+                onClick={() => setLang('VN')}
+                aria-current={lang === 'VN'}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  lang === 'VN'
+                    ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                    : 'text-[#5C6B57] hover:text-[#23301F]'
+                }`}
+              >
+                VN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('EN')}
+                aria-current={lang === 'EN'}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  lang === 'EN'
+                    ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                    : 'text-[#5C6B57] hover:text-[#23301F]'
+                }`}
+              >
+                EN
+              </button>
+            </div>
 
-              {activeTab === 'change-password' && currentUser && (
-                <ChangePasswordPage
-                  key="change-password"
-                  token={token}
-                  onSuccess={() => setActiveTab('profile')}
-                  onCancel={() => setActiveTab('profile')}
-                />
-              )}
-
-              {/* Fallback if accessing profile or change-password when logged out */}
-              {(activeTab === 'profile' ||
-                activeTab === 'change-password') &&
-                !currentUser && (
-                  <motion.div
-                    key="unauthorized"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-amber-200 text-center max-w-md mx-auto"
+            {/* Nav Tabs (.nav-buttons) */}
+            <nav className="flex items-center gap-1 bg-[#F4F0E4] p-1 rounded-xl border border-[#E4DCC8]">
+              {!currentUser ? (
+                <>
+                  <button
+                    onClick={() => setActiveTab('login')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'login'
+                        ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                        : 'text-[#5C6B57] hover:text-[#23301F]'
+                    }`}
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
-                      <ShieldAlert className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">
-                      Yêu cầu đăng nhập
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-2">
-                      Vui lòng đăng nhập để xem thông tin hồ sơ và đổi mật
-                      khẩu của bạn.
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('login')}
-                      className="mt-6 w-full py-3 px-6 rounded-2xl bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition-all shadow-md"
-                    >
-                      Đăng nhập ngay
-                    </button>
-                  </motion.div>
-                )}
-            </AnimatePresence>
+                    Đăng nhập
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('register')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'register'
+                        ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                        : 'text-[#5C6B57] hover:text-[#23301F]'
+                    }`}
+                  >
+                    Đăng ký
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'profile'
+                        ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                        : 'text-[#5C6B57] hover:text-[#23301F]'
+                    }`}
+                  >
+                    Hồ sơ
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('change-password')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'change-password'
+                        ? 'bg-[#1F3A2E] text-[#F5F2E8] shadow-sm'
+                        : 'text-[#5C6B57] hover:text-[#23301F]'
+                    }`}
+                  >
+                    Đổi mật khẩu
+                  </button>
+                </>
+              )}
+            </nav>
           </div>
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="py-6 border-t border-slate-200/60 bg-white/60 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            © 2026 <strong>AgriLog</strong> — Nhật ký điện tử cho người trồng
-            bưởi xuất khẩu.
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span>Powered by NestJS 11 + React 19 + Tailwind CSS</span>
-          </span>
+        {/* Center Form Area (.form-wrap in dang-nhap.html) */}
+        <div className="flex-1 flex items-center justify-center py-4 sm:py-8">
+          <AnimatePresence mode="wait">
+            {activeTab === 'login' && (
+              <LoginPage
+                key="login"
+                onLoginSuccess={handleLoginOrRegisterSuccess}
+                onSwitchToRegister={() => setActiveTab('register')}
+              />
+            )}
+
+            {activeTab === 'register' && (
+              <RegisterPage
+                key="register"
+                onRegisterSuccess={handleLoginOrRegisterSuccess}
+                onSwitchToLogin={() => setActiveTab('login')}
+              />
+            )}
+
+            {activeTab === 'profile' && currentUser && (
+              <ProfilePage
+                key="profile"
+                user={currentUser}
+                token={token}
+                onUserUpdate={handleProfileUpdate}
+                onLogout={handleLogout}
+                onSwitchToChangePassword={() =>
+                  setActiveTab('change-password')
+                }
+              />
+            )}
+
+            {activeTab === 'change-password' && currentUser && (
+              <ChangePasswordPage
+                key="change-password"
+                token={token}
+                onSuccess={() => {
+                  showToast('Đổi mật khẩu thành công.');
+                  setActiveTab('profile');
+                }}
+                onCancel={() => setActiveTab('profile')}
+              />
+            )}
+
+            {(activeTab === 'profile' ||
+              activeTab === 'change-password') &&
+              !currentUser && (
+                <motion.div
+                  key="auth-required"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-[#E4DCC8] text-center max-w-md mx-auto"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-[#F4F0E4] text-[#D9A441] flex items-center justify-center mx-auto mb-4">
+                    <ShieldAlert className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-[#23301F] font-serif">
+                    Yêu cầu đăng nhập
+                  </h3>
+                  <p className="text-sm text-[#5C6B57] mt-2 leading-relaxed">
+                    Vui lòng đăng nhập hệ thống để xem nhật ký và thông tin hồ sơ xuất khẩu của bạn.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('login')}
+                    className="mt-6 w-full py-3.5 px-6 rounded-2xl bg-[#1F3A2E] text-[#F5F2E8] font-bold text-sm hover:bg-[#264839] transition-all shadow-md cursor-pointer"
+                  >
+                    Đăng nhập ngay
+                  </button>
+                </motion.div>
+              )}
+          </AnimatePresence>
         </div>
-      </footer>
+
+        {/* Bottom Footer (.form-footer in dang-nhap.html) */}
+        <footer className="pt-4 border-t border-[#E4DCC8]/60 text-center text-xs text-[#5C6B57] font-medium">
+          © 2026 <strong>AgriLog</strong> — Nhật ký điện tử cho người trồng bưởi xuất khẩu chuẩn GlobalGAP #VN-2026.
+        </footer>
+      </main>
     </div>
   );
 }

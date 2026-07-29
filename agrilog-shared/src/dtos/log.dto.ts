@@ -1,4 +1,4 @@
-import { LoaiHoatDongCanhTac } from '../enums/activity-type.enum';
+import { LoaiHoatDongCanhTac } from '../enums/activity-type.enum.js';
 
 /**
  * Interface DTO tạo nhật ký canh tác điện tử cho lô bưởi

@@ -25,7 +25,7 @@ export const Card: React.FC<CardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -16 }}
       transition={{ duration: 0.3 }}
-      className={`bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border ${borderStyles[variant]} ${className}`}
+      className={`bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border ${borderStyles[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -37,7 +37,7 @@ export const CardHeader: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`text-center mb-8 ${className}`}>{children}</div>
+  <div className={`text-center mb-5 sm:mb-8 ${className}`}>{children}</div>
 );
 
 export const CardTitle: React.FC<{
@@ -46,7 +46,7 @@ export const CardTitle: React.FC<{
   gradient?: boolean;
 }> = ({ children, className = '', gradient = true }) => (
   <h2
-    className={`text-2xl font-bold ${
+    className={`text-xl sm:text-2xl font-bold ${
       gradient
         ? 'bg-gradient-to-r from-green-800 via-green-700 to-blue-700 bg-clip-text text-transparent'
         : 'text-slate-800'

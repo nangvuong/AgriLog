@@ -1,3 +1,3 @@
-export * from './auth.dto';
-export * from './batch.dto';
-export * from './log.dto';
+export * from './auth.dto.js';
+export * from './batch.dto.js';
+export * from './log.dto.js';

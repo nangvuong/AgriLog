@@ -11,10 +11,11 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { ROLE_INFO, VaiTroNguoiDung } from 'agrilog-shared';
 import type { UserProfile } from 'agrilog-shared';
 import { getProfileApi } from '../../services/api';
-import { Alert, Badge, Button, Card } from '../../components/ui';
+import { Alert, Badge } from '../../components/ui';
 
 interface ProfilePageProps {
   user: UserProfile;
@@ -41,159 +42,169 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setRefreshing(true);
     setStatusMsg(null);
     try {
-      const freshUser = await getProfileApi(token);
-      onUserUpdate(freshUser);
-      setStatusMsg('Đã làm mới thông tin từ máy chủ NestJS (GET /auth/me)');
+      const refreshedUser = await getProfileApi(token);
+      onUserUpdate(refreshedUser);
+      setStatusMsg('Đã đồng bộ dữ liệu mới nhất từ hệ thống AgriLog Server');
     } catch (err: any) {
-      setStatusMsg(`Lỗi: ${err.message}`);
+      setStatusMsg('Lỗi khi tải lại hồ sơ: ' + (err.message || ''));
     } finally {
       setRefreshing(false);
     }
   };
 
+  const formatDate = (dateVal: string | Date) => {
+    try {
+      const d = new Date(dateVal);
+      return d.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return String(dateVal);
+    }
+  };
+
   return (
-    <div className="max-w-2xl w-full mx-auto">
-      <Card variant="green">
-        {/* Profile Header Card */}
-        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-green-600 via-green-700 to-blue-700 flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-green-600/25">
-              {user.ho_ten ? user.ho_ten.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-md">
-              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.35 }}
+      className="w-full max-w-[440px] mx-auto text-[#23301F]"
+    >
+      {/* Top Bar */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#E4DCC8]/70">
+        <span className="text-xs uppercase tracking-widest font-bold text-[#345645]">
+          AgriLog User Profile
+        </span>
+        <Badge variant="green" size="sm">
+          Đang hoạt động
+        </Badge>
+      </div>
 
-          <div className="text-center sm:text-left flex-1">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h2 className="text-2xl font-bold text-slate-800">
-                {user.ho_ten}
-              </h2>
-              <Badge variant="green" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                {roleInfo.label}
-              </Badge>
-            </div>
-            <p className="text-sm text-slate-500">{roleInfo.description}</p>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-3 text-xs font-semibold text-slate-600">
-              <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg">
-                <span className="text-slate-400">ID tài khoản:</span>
-                <span className="text-blue-700 font-bold">#{user.id}</span>
-              </span>
-              <Badge variant="emerald" pulse>
-                Đang hoạt động
-              </Badge>
-            </div>
+      {/* Header Info */}
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-[#23301F] font-serif">
+            {user.ho_ten}
+          </h2>
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${roleInfo.bg} ${roleInfo.color} ${roleInfo.border}`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{roleInfo.label}</span>
+            </span>
           </div>
         </div>
 
-        {/* Status notification */}
-        {statusMsg && (
-          <Alert variant="info" className="my-4">
-            {statusMsg}
-          </Alert>
-        )}
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="p-2.5 rounded-xl border border-[#E4DCC8] bg-white hover:bg-[#F4F0E4] transition-colors text-[#5C6B57]"
+          title="Tải lại dữ liệu"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
-        {/* Profile Info Details Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
-          <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/60">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              <Phone className="w-3.5 h-3.5 text-green-600" />
-              <span>Số điện thoại</span>
-            </div>
-            <p className="text-sm font-bold text-slate-800">
-              {user.so_dien_thoai || 'Chưa đăng ký'}
-            </p>
-          </div>
+      {statusMsg && (
+        <Alert variant="info" title="Đồng bộ hồ sơ" className="mb-6">
+          {statusMsg}
+        </Alert>
+      )}
 
-          <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/60">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              <Mail className="w-3.5 h-3.5 text-blue-600" />
-              <span>Email liên hệ</span>
-            </div>
-            <p className="text-sm font-bold text-slate-800">
-              {user.email || 'Chưa đăng ký'}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/60">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              <span>ID Vùng trồng trực thuộc</span>
-            </div>
-            <p className="text-sm font-bold text-slate-800">
-              {user.vung_trong_id
-                ? `Vùng trồng #${user.vung_trong_id}`
-                : 'Chưa gán vùng trồng'}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/60">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
-              <span>Ngày gia nhập</span>
-            </div>
-            <p className="text-sm font-bold text-slate-800">
-              {new Date(user.ngay_tao).toLocaleDateString('vi-VN')}
-            </p>
-          </div>
-        </div>
-
-        {/* GlobalGAP Export Traceability Integration Card */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50 via-white to-green-50 border border-blue-200/80 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-blue-600">
-              <QrCode className="w-6 h-6" />
+      {/* Profile Details Card Section */}
+      <div className="space-y-4">
+        <div className="p-5 rounded-2xl bg-white border border-[#E4DCC8] shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F4F0E4] flex items-center justify-center text-[#1F3A2E] font-bold">
+              <Phone className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-800">
-                Quyền truy xuất lô bưởi xuất khẩu
-              </h4>
-              <p className="text-xs text-slate-500">
-                Tài khoản được phân quyền cập nhật nhật ký & in tem truy xuất
+              <p className="text-xs text-[#5C6B57] font-semibold uppercase">
+                Số điện thoại liên lạc
+              </p>
+              <p className="text-sm sm:text-base font-bold font-mono text-[#23301F] mt-0.5">
+                {user.so_dien_thoai || 'Chưa cập nhật'}
               </p>
             </div>
           </div>
-          <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm">
-            LOT-2026-US-001
-          </span>
+
+          <div className="flex items-center gap-3 pt-3 border-t border-[#E4DCC8]/60">
+            <div className="w-10 h-10 rounded-xl bg-[#F4F0E4] flex items-center justify-center text-[#1F3A2E] font-bold">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-[#5C6B57] font-semibold uppercase">
+                Email hệ thống
+              </p>
+              <p className="text-sm font-semibold text-[#23301F] mt-0.5">
+                {user.email || 'Không có email'}
+              </p>
+            </div>
+          </div>
+
+          {user.vung_trong_id && (
+            <div className="flex items-center gap-3 pt-3 border-t border-[#E4DCC8]/60">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-[#5C6B57] font-semibold uppercase">
+                  ID Vùng trồng / Hợp tác xã
+                </p>
+                <p className="text-sm font-bold font-mono text-blue-700 mt-0.5">
+                  ID: #{user.vung_trong_id}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-3 border-t border-[#E4DCC8]/60">
+            <div className="w-10 h-10 rounded-xl bg-[#F4F0E4] flex items-center justify-center text-[#5C6B57]">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-[#5C6B57] font-semibold uppercase">
+                Ngày tham gia chuỗi
+              </p>
+              <p className="text-xs sm:text-sm font-semibold text-[#23301F] mt-0.5">
+                {formatDate(user.ngay_tao)}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={handleRefresh}
-            isLoading={refreshing}
-            variant="secondary"
-            size="md"
-            className="flex-1"
-            leftIcon={<RefreshCw className="w-4 h-4" />}
-          >
-            Đồng bộ (GET /me)
-          </Button>
-
-          <Button
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <button
+            type="button"
             onClick={onSwitchToChangePassword}
-            variant="outline"
-            size="md"
-            className="flex-1"
-            leftIcon={<KeyRound className="w-4 h-4" />}
+            className="w-full py-3 px-4 rounded-xl border border-[#E4DCC8] bg-white text-[#23301F] font-bold text-xs sm:text-sm hover:bg-[#F4F0E4] flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            Đổi mật khẩu
-          </Button>
+            <KeyRound className="w-4 h-4 text-[#1F3A2E]" />
+            <span>Đổi mật khẩu</span>
+          </button>
 
-          <Button
+          <button
+            type="button"
             onClick={onLogout}
-            variant="danger"
-            size="md"
-            leftIcon={<LogOut className="w-4 h-4" />}
+            className="w-full py-3 px-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs sm:text-sm hover:bg-rose-100 flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            Đăng xuất
-          </Button>
+            <LogOut className="w-4 h-4" />
+            <span>Đăng xuất</span>
+          </button>
         </div>
-      </Card>
-    </div>
+
+        <div className="pt-4 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-200/80 text-xs font-semibold text-blue-700">
+            <QrCode className="w-4 h-4" />
+            <span>Tài khoản sẵn sàng xuất mã QR lô hàng GlobalGAP</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 };
