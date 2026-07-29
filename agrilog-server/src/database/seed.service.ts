@@ -7,7 +7,7 @@ import { DatabaseService } from './database.service';
 export class SeedService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: DatabaseService) { }
 
   async onApplicationBootstrap(): Promise<void> {
     this.logger.log(
@@ -33,6 +33,8 @@ export class SeedService implements OnApplicationBootstrap {
       if (!tableExists) {
         const schemaFilePath = path.join(
           process.cwd(),
+          'database',
+          'seeds',
           'schema_nhat_ky_buoi.sql',
         );
 
