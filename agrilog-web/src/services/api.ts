@@ -1,10 +1,10 @@
-import {
+import type {
   AuthResponse,
   ChangePasswordDto,
   LoginDto,
   RegisterDto,
   UserProfile,
-} from '../types/auth';
+} from 'agrilog-shared';
 
 const API_BASE_URL = 'http://localhost:3000/api/v1/auth';
 

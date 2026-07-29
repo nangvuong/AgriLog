@@ -7,7 +7,7 @@ import {
   Lock,
   ShieldCheck,
 } from 'lucide-react';
-import { ChangePasswordDto } from '../../types/auth';
+import type { ChangePasswordDto } from 'agrilog-shared';
 import { changePasswordApi } from '../../services/api';
 import {
   Alert,

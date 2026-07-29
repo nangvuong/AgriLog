@@ -9,7 +9,7 @@
 ```text
 src/
 ├── components/
-│   ├── ui/                       # [NEW] Bộ UI Components dùng chung cho toàn bộ dự án
+│   ├── ui/                       # Bộ UI Components dùng chung cho toàn bộ dự án
 │   │   ├── Button.tsx            # Button chuẩn với variants: primary, secondary, outline, ghost, danger
 │   │   ├── Input.tsx             # Input có label, helper text, error text, icon left/right
 │   │   ├── Card.tsx              # Card glassmorphic: Card, CardHeader, CardTitle, CardDescription...
@@ -18,15 +18,17 @@ src/
 │   │   └── index.ts              # Export UI barrel
 │   ├── Header.tsx                # Layout Header & Navbar
 │   └── HeroBanner.tsx            # Layout Banner Vườn Bưởi GPS GlobalGAP
-├── pages/                        # [NEW] Danh sách các Trang (Pages)
-│   ├── LoginPage.tsx             # Trang Đăng nhập (tích hợp chọn tài khoản kiểm thử nhanh)
-│   ├── RegisterPage.tsx          # Trang Đăng ký chuỗi cung ứng (chọn 6 vai trò nông nghiệp)
-│   ├── ProfilePage.tsx           # Trang Hồ sơ cá nhân (thẻ truy xuất lô bưởi, đồng bộ backend)
-│   ├── ChangePasswordPage.tsx    # Trang Đổi mật khẩu
+├── pages/
+│   ├── Auth/                     # [NEW] Thư mục chung cho toàn bộ các trang Authentication
+│   │   ├── LoginPage.tsx         # Trang Đăng nhập (kết nối trực tiếp API NestJS :3000)
+│   │   ├── RegisterPage.tsx      # Trang Đăng ký chuỗi cung ứng (chọn 6 vai trò nông nghiệp)
+│   │   ├── ProfilePage.tsx       # Trang Hồ sơ cá nhân (thẻ truy xuất lô bưởi, đồng bộ backend)
+│   │   ├── ChangePasswordPage.tsx# Trang Đổi mật khẩu
+│   │   └── index.ts              # Export Auth pages
 │   └── index.ts                  # Export pages barrel
 ├── page/                         # Alias tương thích cho đường dẫn /page -> /pages
 ├── services/
-│   └── api.ts                    # Tích hợp 4 API Auth NestJS + Chế độ Demo Mock
+│   └── api.ts                    # Tích hợp trực tiếp 4 API Auth NestJS (http://localhost:3000/api/v1/auth)
 ├── types/
 │   └── auth.ts                   # Type definitions cho người dùng và DTOs
 └── App.tsx                       # Component chính kết nối định tuyến & Layout
@@ -34,18 +36,16 @@ src/
 
 ---
 
-## 2. Kết nối với 4 Endpoints Backend (`/api/v1/auth`)
+## 2. Kết nối trực tiếp với 4 Endpoints Backend (`/api/v1/auth`)
 
-Giao diện đã tích hợp đầy đủ 4 endpoint xác thực từ **NestJS Backend**:
+Giao diện đã tích hợp đầy đủ 4 endpoint xác thực thực tế từ **NestJS Backend**:
 
-| Chức năng | Endpoint API | Trạng thái bảo mật | Trang tương ứng |
+| Chức năng | Endpoint API | Trạng thái bảo mật | Trang tương ứng (`src/pages/Auth`) |
 | :--- | :--- | :--- | :--- |
-| **Đăng nhập** | `POST http://localhost:3000/api/v1/auth/login` | Public | [`LoginPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/LoginPage.tsx) |
-| **Đăng ký** | `POST http://localhost:3000/api/v1/auth/register` | Public | [`RegisterPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/RegisterPage.tsx) |
-| **Hồ sơ cá nhân** | `GET http://localhost:3000/api/v1/auth/me` | Bearer JWT | [`ProfilePage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/ProfilePage.tsx) |
-| **Đổi mật khẩu** | `POST http://localhost:3000/api/v1/auth/change-password` | Bearer JWT | [`ChangePasswordPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/ChangePasswordPage.tsx) |
-
-> **Tính năng đặc biệt (Chế độ Demo Mock)**: Trên thanh Header có nút chuyển đổi giữa **API NestJS (:3000)** và **Chế độ Demo Mock**. Nếu bạn muốn kiểm thử giao diện mà không cần chạy server backend, chỉ cần bật **Chế độ Demo Mock**!
+| **Đăng nhập** | `POST http://localhost:3000/api/v1/auth/login` | Public | [`LoginPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/Auth/LoginPage.tsx) |
+| **Đăng ký** | `POST http://localhost:3000/api/v1/auth/register` | Public | [`RegisterPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/Auth/RegisterPage.tsx) |
+| **Hồ sơ cá nhân** | `GET http://localhost:3000/api/v1/auth/me` | Bearer JWT | [`ProfilePage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/Auth/ProfilePage.tsx) |
+| **Đổi mật khẩu** | `POST http://localhost:3000/api/v1/auth/change-password` | Bearer JWT | [`ChangePasswordPage`](file:///Users/nangvuong/Desktop/AgriLog/agrilog-web/src/pages/Auth/ChangePasswordPage.tsx) |
 
 ---
 

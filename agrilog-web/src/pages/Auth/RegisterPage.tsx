@@ -11,12 +11,8 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
-import {
-  AuthResponse,
-  RegisterDto,
-  ROLE_INFO,
-  VaiTroNguoiDung,
-} from '../../types/auth';
+import { ROLE_INFO, VaiTroNguoiDung } from 'agrilog-shared';
+import type { AuthResponse, RegisterDto } from 'agrilog-shared';
 import { registerApi } from '../../services/api';
 import {
   Alert,
@@ -42,19 +38,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   const [soDienThoai, setSoDienThoai] = useState('');
   const [email, setEmail] = useState('');
   const [matKhau, setMatKhau] = useState('');
-  const [vaiTro, setVaiTro] = useState<VaiTroNguoiDung>('nong_dan');
+  const [vaiTro, setVaiTro] = useState<VaiTroNguoiDung>(
+    VaiTroNguoiDung.NONG_DAN,
+  );
   const [vungTrongId, setVungTrongId] = useState<number>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const roles: VaiTroNguoiDung[] = [
-    'nong_dan',
-    'quan_ly',
-    'ky_thuat',
-    'xuat_khau',
-    'kiem_dinh',
-    'admin',
+    VaiTroNguoiDung.NONG_DAN,
+    VaiTroNguoiDung.QUAN_LY,
+    VaiTroNguoiDung.KY_THUAT,
+    VaiTroNguoiDung.XUAT_KHAU,
+    VaiTroNguoiDung.KIEM_DINH,
+    VaiTroNguoiDung.ADMIN,
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

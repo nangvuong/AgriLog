@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { type IChangePasswordDto } from 'agrilog-shared';
 
-export class ChangePasswordDto {
+export class ChangePasswordDto implements IChangePasswordDto {
   @ApiProperty({
     description: 'Mật khẩu hiện tại',
     example: 'matkhau123',

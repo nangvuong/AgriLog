@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { VaiTroNguoiDung } from './register.dto';
+import {
+  VaiTroNguoiDung,
+  type IUserProfile,
+  type IAuthResponse,
+} from 'agrilog-shared';
 
-export class UserProfileDto {
+export class UserProfileDto implements IUserProfile {
   @ApiProperty({ example: 1, description: 'ID người dùng' })
   id!: number;
 
@@ -34,7 +38,7 @@ export class UserProfileDto {
   ngay_tao!: Date;
 }
 
-export class AuthResponseDto {
+export class AuthResponseDto implements IAuthResponse {
   @ApiProperty({
     description: 'JWT Access Token để chứng thực cho các API bảo mật',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -42,8 +46,8 @@ export class AuthResponseDto {
   access_token!: string;
 
   @ApiProperty({
-    description: 'Thông tin hồ sơ người dùng',
     type: UserProfileDto,
+    description: 'Thông tin hồ sơ của người dùng đang đăng nhập',
   })
   user!: UserProfileDto;
 }

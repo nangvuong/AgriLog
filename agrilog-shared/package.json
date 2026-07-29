@@ -1,0 +1,33 @@
+{
+  "name": "agrilog-shared",
+  "version": "1.0.0",
+  "description": "Thư viện chia sẻ Enum và Type chung cho Backend (agrilog-server) và Frontend (agrilog-web) - Nhật ký bưởi xuất khẩu AgriLog",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "agrilog",
+    "shared",
+    "enums",
+    "types",
+    "pomelo",
+    "globalgap"
+  ],
+  "author": "AgriLog Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

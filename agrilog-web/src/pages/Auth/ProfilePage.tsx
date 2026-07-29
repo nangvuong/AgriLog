@@ -11,7 +11,8 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import { ROLE_INFO, UserProfile } from '../../types/auth';
+import { ROLE_INFO, VaiTroNguoiDung } from 'agrilog-shared';
+import type { UserProfile } from 'agrilog-shared';
 import { getProfileApi } from '../../services/api';
 import { Alert, Badge, Button, Card } from '../../components/ui';
 
@@ -33,7 +34,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
-  const roleInfo = ROLE_INFO[user.vai_tro] || ROLE_INFO.nong_dan;
+  const roleInfo =
+    ROLE_INFO[user.vai_tro] || ROLE_INFO[VaiTroNguoiDung.NONG_DAN];
 
   const handleRefresh = async () => {
     setRefreshing(true);

@@ -10,7 +10,7 @@ import {
   User,
   UserPlus,
 } from 'lucide-react';
-import { UserProfile } from '../types/auth';
+import type { UserProfile } from 'agrilog-shared';
 
 interface HeaderProps {
   activeTab: 'login' | 'register' | 'profile' | 'change-password';

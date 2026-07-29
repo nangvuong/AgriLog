@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AuthResponse, UserProfile } from './types/auth';
+import type { AuthResponse, UserProfile } from 'agrilog-shared';
 import { Header } from './components/Header';
 import { HeroBanner } from './components/HeroBanner';
 import {

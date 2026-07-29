@@ -7,7 +7,7 @@ import {
   Phone,
   Sparkles,
 } from 'lucide-react';
-import { AuthResponse, LoginDto } from '../../types/auth';
+import type { AuthResponse, LoginDto } from 'agrilog-shared';
 import { loginApi } from '../../services/api';
 import {
   Alert,

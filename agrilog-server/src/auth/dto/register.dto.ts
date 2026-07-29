@@ -8,17 +8,9 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { VaiTroNguoiDung, type IRegisterDto } from 'agrilog-shared';
 
-export enum VaiTroNguoiDung {
-  NONG_DAN = 'nong_dan',
-  QUAN_LY = 'quan_ly',
-  KY_THUAT = 'ky_thuat',
-  XUAT_KHAU = 'xuat_khau',
-  KIEM_DINH = 'kiem_dinh',
-  ADMIN = 'admin',
-}
-
-export class RegisterDto {
+export class RegisterDto implements IRegisterDto {
   @ApiProperty({
     description: 'Họ và tên người dùng',
     example: 'Nguyễn Văn Nông',
