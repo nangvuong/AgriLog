@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AuthResponse, UserProfile } from './types/auth';
-import { isDemoMode, setDemoMode } from './services/api';
 import { Header } from './components/Header';
-import { LoginView } from './components/LoginView';
-import { RegisterView } from './components/RegisterView';
-import { ProfileView } from './components/ProfileView';
-import { ChangePasswordView } from './components/ChangePasswordView';
 import { HeroBanner } from './components/HeroBanner';
+import {
+  ChangePasswordPage,
+  LoginPage,
+  ProfilePage,
+  RegisterPage,
+} from './pages/Auth';
 import { ShieldAlert } from 'lucide-react';
 
 export default function App() {
@@ -16,11 +17,9 @@ export default function App() {
   >('login');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string>('');
-  const [demo, setDemoState] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check saved session in localStorage
     const savedToken = localStorage.getItem('agrilog_token');
     const savedUserJson = localStorage.getItem('agrilog_user');
     if (savedToken && savedUserJson) {
@@ -35,17 +34,6 @@ export default function App() {
       }
     }
   }, []);
-
-  const handleToggleDemoMode = () => {
-    const nextMode = !demo;
-    setDemoState(nextMode);
-    setDemoMode(nextMode);
-    showToast(
-      nextMode
-        ? 'Đã bật chế độ Demo (Mock data tự động)'
-        : 'Đã chuyển về API Backend thực (http://localhost:3000/api/v1)',
-    );
-  };
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -84,8 +72,6 @@ export default function App() {
         setActiveTab={setActiveTab}
         currentUser={currentUser}
         onLogout={handleLogout}
-        isDemoMode={demo}
-        onToggleDemoMode={handleToggleDemoMode}
       />
 
       {/* Floating Toast Notification */}
@@ -109,11 +95,11 @@ export default function App() {
           {/* Left Side: Hero Artwork Banner */}
           <HeroBanner />
 
-          {/* Right Side: Interactive Auth Cards */}
+          {/* Right Side: Interactive Pages */}
           <div className="w-full">
             <AnimatePresence mode="wait">
               {activeTab === 'login' && (
-                <LoginView
+                <LoginPage
                   key="login"
                   onLoginSuccess={handleLoginOrRegisterSuccess}
                   onSwitchToRegister={() => setActiveTab('register')}
@@ -121,7 +107,7 @@ export default function App() {
               )}
 
               {activeTab === 'register' && (
-                <RegisterView
+                <RegisterPage
                   key="register"
                   onRegisterSuccess={handleLoginOrRegisterSuccess}
                   onSwitchToLogin={() => setActiveTab('login')}
@@ -129,7 +115,7 @@ export default function App() {
               )}
 
               {activeTab === 'profile' && currentUser && (
-                <ProfileView
+                <ProfilePage
                   key="profile"
                   user={currentUser}
                   token={token}
@@ -142,7 +128,7 @@ export default function App() {
               )}
 
               {activeTab === 'change-password' && currentUser && (
-                <ChangePasswordView
+                <ChangePasswordPage
                   key="change-password"
                   token={token}
                   onSuccess={() => setActiveTab('profile')}

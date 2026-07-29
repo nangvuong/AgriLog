@@ -9,9 +9,7 @@ import {
   ShieldCheck,
   User,
   UserPlus,
-  Wifi,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { UserProfile } from '../types/auth';
 
 interface HeaderProps {
@@ -19,8 +17,6 @@ interface HeaderProps {
   setActiveTab: (tab: 'login' | 'register' | 'profile' | 'change-password') => void;
   currentUser: UserProfile | null;
   onLogout: () => void;
-  isDemoMode: boolean;
-  onToggleDemoMode: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,8 +24,6 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   currentUser,
   onLogout,
-  isDemoMode,
-  onToggleDemoMode,
 }) => {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-green-100 shadow-sm transition-all duration-300">
@@ -60,28 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Status indicator & Nav tabs */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Toggle Demo vs Backend Mode */}
-          <button
-            onClick={onToggleDemoMode}
-            title={
-              isDemoMode
-                ? 'Đang dùng chế độ Demo (Mock data), nhấn để thử kết nối API thực http://localhost:3000'
-                : 'Đang kết nối API Backend thực tế (http://localhost:3000/api/v1)'
-            }
-            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-              isDemoMode
-                ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-            }`}
-          >
-            <Server className="w-3.5 h-3.5" />
-            <span>{isDemoMode ? 'Chế độ Demo Mock' : 'API NestJS: :3000'}</span>
-            <span
-              className={`w-2 h-2 rounded-full animate-pulse ${
-                isDemoMode ? 'bg-amber-500' : 'bg-green-500'
-              }`}
-            />
-          </button>
 
           {/* Navigation Tabs */}
           <nav className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">

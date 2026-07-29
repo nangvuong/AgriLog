@@ -10,13 +10,12 @@ import {
   QrCode,
   RefreshCw,
   ShieldCheck,
-  User,
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { ROLE_INFO, UserProfile } from '../types/auth';
-import { getProfileApi } from '../services/api';
+import { ROLE_INFO, UserProfile } from '../../types/auth';
+import { getProfileApi } from '../../services/api';
+import { Alert, Badge, Button, Card } from '../../components/ui';
 
-interface ProfileViewProps {
+interface ProfilePageProps {
   user: UserProfile;
   token: string;
   onUserUpdate: (updatedUser: UserProfile) => void;
@@ -24,7 +23,7 @@ interface ProfileViewProps {
   onSwitchToChangePassword: () => void;
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({
+export const ProfilePage: React.FC<ProfilePageProps> = ({
   user,
   token,
   onUserUpdate,
@@ -34,8 +33,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
-  const roleInfo =
-    ROLE_INFO[user.vai_tro] || ROLE_INFO.nong_dan;
+  const roleInfo = ROLE_INFO[user.vai_tro] || ROLE_INFO.nong_dan;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -52,14 +50,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -16 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full mx-auto"
-    >
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-green-100/80">
+    <div className="max-w-2xl w-full mx-auto">
+      <Card variant="green">
         {/* Profile Header Card */}
         <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
           <div className="relative">
@@ -78,12 +70,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <h2 className="text-2xl font-bold text-slate-800">
                 {user.ho_ten}
               </h2>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleInfo.bg} ${roleInfo.color} border ${roleInfo.border}`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
+              <Badge variant="green" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
                 {roleInfo.label}
-              </span>
+              </Badge>
             </div>
             <p className="text-sm text-slate-500">{roleInfo.description}</p>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-3 text-xs font-semibold text-slate-600">
@@ -91,23 +80,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span className="text-slate-400">ID tài khoản:</span>
                 <span className="text-blue-700 font-bold">#{user.id}</span>
               </span>
-              <span className="flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-lg">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <Badge variant="emerald" pulse>
                 Đang hoạt động
-              </span>
+              </Badge>
             </div>
           </div>
         </div>
 
         {/* Status notification */}
         {statusMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="my-4 p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold text-center"
-          >
+          <Alert variant="info" className="my-4">
             {statusMsg}
-          </motion.div>
+          </Alert>
         )}
 
         {/* Profile Info Details Grid */}
@@ -177,40 +161,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
+          <Button
             onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex-1 py-3 px-5 rounded-2xl bg-green-50 hover:bg-green-100 text-green-800 font-semibold text-xs border border-green-200 flex items-center justify-center gap-2 transition-all"
+            isLoading={refreshing}
+            variant="secondary"
+            size="md"
+            className="flex-1"
+            leftIcon={<RefreshCw className="w-4 h-4" />}
           >
-            <RefreshCw
-              className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-            />
-            <span>Đồng bộ từ máy chủ (GET /auth/me)</span>
-          </motion.button>
+            Đồng bộ (GET /me)
+          </Button>
 
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
+          <Button
             onClick={onSwitchToChangePassword}
-            className="flex-1 py-3 px-5 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold text-xs border border-blue-200 flex items-center justify-center gap-2 transition-all"
+            variant="outline"
+            size="md"
+            className="flex-1"
+            leftIcon={<KeyRound className="w-4 h-4" />}
           >
-            <KeyRound className="w-4 h-4" />
-            <span>Đổi mật khẩu</span>
-          </motion.button>
+            Đổi mật khẩu
+          </Button>
 
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
+          <Button
             onClick={onLogout}
-            className="py-3 px-5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200 flex items-center justify-center gap-2 transition-all"
+            variant="danger"
+            size="md"
+            leftIcon={<LogOut className="w-4 h-4" />}
           >
-            <LogOut className="w-4 h-4" />
-            <span>Đăng xuất</span>
-          </motion.button>
+            Đăng xuất
+          </Button>
         </div>
-      </div>
-    </motion.div>
+      </Card>
+    </div>
   );
 };
