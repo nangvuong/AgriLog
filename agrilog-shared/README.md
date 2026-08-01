@@ -1,70 +1,75 @@
 # AgriLog Shared (`agrilog-shared`)
 
-Thư viện **Enum & DTO Interfaces thuần túy (Pure TypeScript)** dùng chung cho cả hệ thống **Backend (`agrilog-server`)** và **Frontend (`agrilog-web`)** thuộc dự án **Nhật ký điện tử cho người trồng bưởi xuất khẩu (AgriLog)**.
-
-> [!IMPORTANT]
-> **Nguyên tắc thiết kế**: Không chia sẻ decorators (`@ApiProperty()`, `@IsNotEmpty()`, v.v.) hay các dependency của Server (`@nestjs/swagger`, `class-validator`) trong thư viện này. Thư viện chỉ chứa các **interface/type TypeScript thuần túy** và **enums**.
+Thư viện **Hợp đồng dữ liệu dùng chung (Single Source of Truth)** chứa các **DTO Interfaces, Enums và Domain Types thuần túy (Pure TypeScript)** cho toàn bộ hệ thống **Backend (`agrilog-server`)** và **Frontend (`agrilog-web`)** trong dự án **AgriLog** (Hệ thống Nhật ký Canh tác Nông nghiệp Thông minh đa cây trồng).
 
 ---
 
-## 1. Cấu trúc thư viện
+## 1. Nguyên tắc Thiết kế Cốt lõi
+
+> [!IMPORTANT]
+> - **Thuần TypeScript (Zero Framework Dependencies)**: Thư viện không chứa decorators của NestJS/Swagger (`@ApiProperty()`, `@IsNotEmpty()`, v.v.) hay bất kỳ dependency liên quan đến cơ sở dữ liệu hay giao diện UI.
+> - **Đồng bộ tuyệt đối**: Cả Frontend và Backend bắt buộc phải import định nghĩa từ `agrilog-shared`, không được tự ý khai báo lại các Enum hoặc cấu trúc DTO cục bộ.
+
+---
+
+## 2. Cấu trúc Thư mục
 
 ```text
 agrilog-shared/
 ├── src/
-│   ├── enums/
-│   │   ├── user-role.enum.ts       # Enum VaiTroNguoiDung (6 vai trò chuỗi bưởi xuất khẩu) & ROLE_INFO
-│   │   ├── batch-status.enum.ts    # Enum TrangThaiLoBuoi (trạng thái lô xuất khẩu GlobalGAP)
-│   │   ├── activity-type.enum.ts   # Enum LoaiHoatDongCanhTac (nhật ký bón phân, tưới, phun thuốc...)
-│   │   ├── standard.enum.ts        # Enum TieuChuanKiemDinh (GlobalGAP, VietGAP, USDA, EU...)
-│   │   └── index.ts                # Barrel export cho enums
-│   ├── dtos/
-│   │   ├── auth.dto.ts             # ILoginDto, IRegisterDto, IChangePasswordDto, IUserProfile, IAuthResponse
-│   │   ├── batch.dto.ts            # ICreatePomeloBatchDto, IPomeloBatchDto
-│   │   ├── log.dto.ts              # ICreateFarmingLogDto, IFarmingLogDto
-│   │   └── index.ts                # Barrel export cho dtos
-│   └── index.ts                    # Entry point chính
-├── dist/                           # Mã nguồn compiled JavaScript (ES2022/ESM) & TypeScript declarations (*.d.ts)
-└── package.json                    # Cấu hình package agrilog-shared
+│   ├── dtos/          # Các Data Transfer Object (DTO) cho API requests & responses
+│   │   └── index.ts   # Entry point export các DTO
+│   ├── enums/         # Các Enums nghiệp vụ toàn hệ thống (UserRole, ActivityType, SeasonStatus, ...)
+│   │   └── index.ts   # Entry point export các Enums
+│   ├── types/         # Các TypeScript types/interfaces chung (Pagination, Meta, GeoJSON, ...)
+│   │   └── index.ts   # Entry point export các Types
+│   └── index.ts       # Entry point gốc xuất (export *) toàn bộ dtos, enums, types
+├── dist/              # Thư mục mã nguồn sau khi biên dịch (ES2022/ESM + *.d.ts)
+├── package.json       # Tên package: "agrilog-shared"
+└── tsconfig.json      # Cấu hình compiler TypeScript
 ```
 
 ---
 
-## 2. Cách Phân Tách Trách Nhiệm (Frontend & Backend)
+## 3. Quy chuẩn Tích hợp
 
-### Frontend (`agrilog-web`)
-Sử dụng trực tiếp các type/interface DTO và enum từ `agrilog-shared` mà không cần bất kỳ file type cục bộ nào:
+### Với Web Frontend (`agrilog-web`)
+Frontend import trực tiếp các Interface/Type và Enum để định kiểu props, state và kết quả gọi API:
 
 ```ts
-import { ROLE_INFO, VaiTroNguoiDung } from 'agrilog-shared';
-import type { AuthResponse, LoginDto, RegisterDto, UserProfile } from 'agrilog-shared';
+import { type UserRole, type ActivityType } from 'agrilog-shared';
+import { type ILoginRequestDto, type IFarmingLogDto } from 'agrilog-shared';
 ```
 
-### Backend (`agrilog-server`)
-Định nghĩa các DTO class riêng tại `src/auth/dto/` có gắn decorator của Swagger (`@ApiProperty`) và Validation (`class-validator`), đồng thời **`implements`** interface từ `agrilog-shared` để đảm bảo đồng bộ 100% hợp đồng dữ liệu với Frontend:
+### Với Backend Server (`agrilog-server`)
+Backend khai báo các class DTO định dạng cho Swagger/ValidationPipe và **`implements`** interface từ `agrilog-shared` để đảm bảo hợp đồng dữ liệu không bao giờ bị lệch:
 
 ```ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { type ILoginDto } from 'agrilog-shared';
+import { type ILoginRequestDto } from 'agrilog-shared';
 
-export class LoginDto implements ILoginDto {
-  @ApiProperty({ example: '0901234567' })
+export class LoginRequestDto implements ILoginRequestDto {
+  @ApiProperty({ example: 'nongdan_tu' })
   @IsNotEmpty()
   @IsString()
-  so_dien_thoai_hoac_email!: string;
+  username!: string;
 
   @ApiProperty({ example: 'matkhau123' })
   @IsNotEmpty()
   @IsString()
-  mat_khau!: string;
+  password!: string;
 }
 ```
 
 ---
 
-## 3. Build Thư Viện
+## 4. Hướng dẫn Biên dịch (Build)
+
+Mỗi khi thêm mới hoặc chỉnh sửa DTO/Enum trong thư viện này, cần chạy lệnh biên dịch lại để cập nhật thư mục `dist/`:
+
 ```bash
-cd /Users/nangvuong/Desktop/AgriLog/agrilog-shared
+cd agrilog-shared
+npm install
 npm run build
 ```
