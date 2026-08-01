@@ -13,6 +13,10 @@ export class DatabaseService {
     private readonly dataSource: DataSource,
   ) {}
 
+  getDataSource(): DataSource {
+    return this.dataSource;
+  }
+
   /**
    * Kiểm tra kết nối CSDL (Health check)
    */

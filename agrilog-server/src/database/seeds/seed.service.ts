@@ -19,6 +19,34 @@ export class SeedService {
     try {
       await this.databaseService.executeSqlFile(seedFilePath);
       this.logger.log('Database seed execution completed successfully.');
+
+      this.logger.log('Synchronizing PostgreSQL serial ID sequences...');
+      const queryRunner = this.databaseService.getDataSource().createQueryRunner();
+      await queryRunner.connect();
+      try {
+        const sequences = await queryRunner.query(`
+          SELECT c.relname AS seq_name,
+                 t.relname AS table_name
+          FROM pg_class c
+          JOIN pg_depend d ON d.objid = c.oid
+          JOIN pg_class t ON d.refobjid = t.oid
+          JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+          WHERE c.relkind = 'S' AND a.attname = 'id';
+        `);
+
+        for (const { seq_name, table_name } of sequences) {
+          try {
+            await queryRunner.query(`
+              SELECT setval('${seq_name}', COALESCE((SELECT MAX(id) FROM "${table_name}"), 1));
+            `);
+          } catch (seqError: any) {
+            this.logger.warn(`Could not sync sequence ${seq_name} for table ${table_name}: ${seqError.message}`);
+          }
+        }
+        this.logger.log('PostgreSQL ID sequences synchronized.');
+      } finally {
+        await queryRunner.release();
+      }
     } catch (error: any) {
       this.logger.error(`Database seed execution failed: ${error.message}`, error.stack);
       throw error;

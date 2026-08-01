@@ -4,7 +4,16 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database';
 import { RedisModule } from './redis';
-import { AuthModule, UsersModule } from './modules';
+import {
+  AuthModule,
+  UsersModule,
+  FarmsModule,
+  PlotsModule,
+  CropsModule,
+  CropVarietiesModule,
+  MaterialsModule,
+  AssetsModule,
+} from './modules';
 import { databaseConfig, redisConfig } from './config';
 
 @Module({
@@ -17,6 +26,12 @@ import { databaseConfig, redisConfig } from './config';
     RedisModule,
     UsersModule,
     AuthModule,
+    FarmsModule,
+    PlotsModule,
+    CropsModule,
+    CropVarietiesModule,
+    MaterialsModule,
+    AssetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
