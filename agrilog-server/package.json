@@ -7,38 +7,19 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "echo \"No tests configured\"",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:restart": "docker compose down && docker compose up -d",
-    "db:reset": "docker compose down -v && docker compose up -d",
-    "db:logs": "docker compose logs -f postgres",
-    "db:psql": "docker compose exec -it postgres psql -U postgres -d agrilog_db"
+    "test": "echo \"No tests configured\""
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
-    "@nestjs/jwt": "^11.0.2",
-    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.0",
-    "@nestjs/swagger": "^11.4.6",
-    "agrilog-shared": "file:../agrilog-shared",
-    "bcryptjs": "^3.0.3",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.15.1",
-    "passport": "^0.7.0",
-    "passport-jwt": "^4.0.1",
-    "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.0",
-    "@types/passport-jwt": "^4.0.1",
-    "@types/pg": "^8.20.0",
     "eslint": "^9.0.0",
     "typescript": "^5.6.3"
   }
