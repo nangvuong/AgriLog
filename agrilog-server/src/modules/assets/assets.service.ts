@@ -6,9 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AssetEntity } from './asset.entity';
-import { CreateAssetDto, UpdateAssetDto } from './dto';
+import { CreateAssetDto, UpdateAssetDto, AssetQueryDto } from './dto';
 import { FarmsService } from '../farms/farms.service';
-import { AssetStatus } from 'agrilog-shared';
+import { AssetStatus, IPaginatedResponse } from 'agrilog-shared';
+import { paginateResponse } from '../../common';
 
 @Injectable()
 export class AssetsService {
@@ -19,10 +20,8 @@ export class AssetsService {
   ) {}
 
   async create(dto: CreateAssetDto): Promise<any> {
-    // Kiểm tra trang trại sở hữu tồn tại
     const farm = await this.farmsService.findOne(dto.farm_id);
 
-    // Nếu có serial_number, kiểm tra không trùng lặp số sê-ri trong hệ thống
     if (dto.serial_number) {
       const existingSerial = await this.assetRepository.findOne({
         where: { serial_number: dto.serial_number },
@@ -42,21 +41,26 @@ export class AssetsService {
     };
   }
 
-  async findAll(farmId?: number, status?: AssetStatus): Promise<any[]> {
+  async findAll(query: AssetQueryDto = {}): Promise<IPaginatedResponse<any>> {
+    const { farmId, status, page = 1, limit = 10 } = query;
     const whereCondition: any = {};
     if (farmId) whereCondition.farm_id = Number(farmId);
     if (status) whereCondition.status = status;
 
-    const assets = await this.assetRepository.find({
+    const [assets, totalItems] = await this.assetRepository.findAndCount({
       where: whereCondition,
       relations: ['farm'],
       order: { name: 'ASC' },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
     });
 
-    return assets.map((a) => ({
+    const enriched = assets.map((a) => ({
       ...a,
       farm_name: a.farm?.name,
     }));
+
+    return paginateResponse(enriched, totalItems, page, limit);
   }
 
   async findOne(id: number): Promise<any> {

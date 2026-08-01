@@ -20,9 +20,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { MaterialsService } from './materials.service';
-import { CreateMaterialDto, UpdateMaterialDto, MaterialResponseDto } from './dto';
+import {
+  CreateMaterialDto,
+  UpdateMaterialDto,
+  MaterialResponseDto,
+  MaterialQueryDto,
+} from './dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { UserRole } from 'agrilog-shared';
+import { IPaginatedResponse, UserRole } from 'agrilog-shared';
 
 @ApiTags('Materials — Quản lý Vật tư Nông nghiệp')
 @ApiBearerAuth()
@@ -53,23 +58,18 @@ export class MaterialsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách vật tư nông nghiệp',
+    summary: 'Danh sách vật tư nông nghiệp (phân trang & bộ lọc)',
     description:
-      'Truy xuất danh sách toàn bộ vật tư trong hệ thống hoặc lọc theo danh mục phân loại (category).',
-  })
-  @ApiQuery({
-    name: 'category',
-    required: false,
-    type: String,
-    description: 'Lọc danh sách vật tư theo danh mục (e.g. Phân bón, Thuốc BVTV, Hạt giống...)',
+      'Truy xuất danh sách vật tư có hỗ trợ phân trang (page, limit) và lọc theo danh mục phân loại (category).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách vật tư nông nghiệp',
-    type: [MaterialResponseDto],
+    description: 'Danh sách vật tư phân trang',
   })
-  async findAll(@Query('category') category?: string): Promise<MaterialResponseDto[]> {
-    return this.materialsService.findAll(category);
+  async findAll(
+    @Query() query: MaterialQueryDto,
+  ): Promise<IPaginatedResponse<MaterialResponseDto>> {
+    return this.materialsService.findAll(query);
   }
 
   @Get(':id')

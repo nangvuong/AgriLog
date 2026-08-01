@@ -6,8 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CropVarietyEntity } from './crop-variety.entity';
-import { CreateCropVarietyDto, UpdateCropVarietyDto } from './dto';
+import { CreateCropVarietyDto, UpdateCropVarietyDto, CropVarietyQueryDto } from './dto';
 import { CropsService } from '../crops/crops.service';
+import { IPaginatedResponse } from 'agrilog-shared';
+import { paginateResponse } from '../../common';
 
 @Injectable()
 export class CropVarietiesService {
@@ -42,18 +44,24 @@ export class CropVarietiesService {
     };
   }
 
-  async findAll(cropId?: number): Promise<any[]> {
+  async findAll(query: CropVarietyQueryDto = {}): Promise<IPaginatedResponse<any>> {
+    const { cropId, page = 1, limit = 10 } = query;
     const whereCondition = cropId ? { crop_id: Number(cropId) } : {};
-    const varieties = await this.varietyRepository.find({
+
+    const [varieties, totalItems] = await this.varietyRepository.findAndCount({
       where: whereCondition,
       relations: ['crop'],
       order: { name: 'ASC' },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
     });
 
-    return varieties.map((v) => ({
+    const enriched = varieties.map((v) => ({
       ...v,
       crop_name: v.crop?.name,
     }));
+
+    return paginateResponse(enriched, totalItems, page, limit);
   }
 
   async findOne(id: number): Promise<any> {

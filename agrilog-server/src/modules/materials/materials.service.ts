@@ -6,7 +6,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaterialEntity } from './material.entity';
-import { CreateMaterialDto, UpdateMaterialDto } from './dto';
+import { CreateMaterialDto, UpdateMaterialDto, MaterialQueryDto } from './dto';
+import { IPaginatedResponse } from 'agrilog-shared';
+import { paginateResponse } from '../../common';
 
 @Injectable()
 export class MaterialsService {
@@ -27,12 +29,17 @@ export class MaterialsService {
     return this.materialRepository.save(material);
   }
 
-  async findAll(category?: string): Promise<MaterialEntity[]> {
+  async findAll(query: MaterialQueryDto = {}): Promise<IPaginatedResponse<MaterialEntity>> {
+    const { category, page = 1, limit = 10 } = query;
     const whereCondition = category ? { category } : {};
-    return this.materialRepository.find({
+    const [materials, totalItems] = await this.materialRepository.findAndCount({
       where: whereCondition,
       order: { name: 'ASC' },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
     });
+
+    return paginateResponse(materials, totalItems, page, limit);
   }
 
   async findOne(id: number): Promise<MaterialEntity> {

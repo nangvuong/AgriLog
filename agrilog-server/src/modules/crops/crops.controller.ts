@@ -25,11 +25,12 @@ import {
   UpdateCropDto,
   CropResponseDto,
   CropSummaryResponseDto,
+  CropQueryDto,
 } from './dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { UserRole } from 'agrilog-shared';
+import { IPaginatedResponse, UserRole } from 'agrilog-shared';
 
-@ApiTags('Crops — Quản lý Loại Cây Trồng')
+@ApiTags('Crops — Quản lý Danh mục Cây trồng')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('crops')
@@ -39,13 +40,13 @@ export class CropsController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({
-    summary: 'Tạo loại cây trồng nông nghiệp mới',
+    summary: 'Tạo loại cây trồng mới',
     description:
-      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký thông tin loại cây trồng (Bưởi, Sầu riêng, Lúa...).',
+      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký thông tin cây trồng (e.g. Bưởi, Sầu riêng, Cam...).',
   })
   @ApiResponse({
     status: 201,
-    description: 'Tạo thành công',
+    description: 'Tạo loại cây trồng thành công',
     type: CropResponseDto,
   })
   @ApiResponse({
@@ -58,24 +59,17 @@ export class CropsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách các loại cây trồng',
+    summary: 'Danh sách các loại cây trồng (phân trang & tổng hợp)',
     description:
-      'Lấy danh sách các loại cây trồng. Có thể bật tham số summary=true để đếm tổng số giống cây (variety_count).',
-  })
-  @ApiQuery({
-    name: 'summary',
-    required: false,
-    type: Boolean,
-    description: 'Bật true để trả về thông tin tổng hợp số lượng giống cây',
+      'Lấy danh sách các loại cây trồng có hỗ trợ phân trang (page, limit). Có thể bật tham số summary=true để đếm tổng số giống cây (variety_count).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách cây trồng',
-    type: [CropSummaryResponseDto],
+    description: 'Danh sách cây trồng phân trang',
   })
-  async findAll(@Query('summary') summary?: string): Promise<any[]> {
-    const isSummary = summary === 'true' || summary === '1';
-    return this.cropsService.findAll(isSummary);
+  async findAll(@Query() query: CropQueryDto): Promise<IPaginatedResponse<any>> {
+    const isSummary = query.summary === 'true' || query.summary === '1';
+    return this.cropsService.findAll(isSummary, query.page, query.limit);
   }
 
   @Get(':id')

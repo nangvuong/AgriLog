@@ -15,38 +15,56 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FarmsService } from './farms.service';
+import { CreateFarmDto, FarmResponseDto, UpdateFarmDto } from './dto';
 import {
-  CreateFarmDto,
-  UpdateFarmDto,
-  FarmResponseDto,
-  FarmSummaryResponseDto,
-} from './dto';
-import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { UserRole } from 'agrilog-shared';
+  JwtAuthGuard,
+  PaginationQueryDto,
+  Roles,
+  RolesGuard,
+} from '../../common';
+import { IPaginatedResponse, UserRole } from 'agrilog-shared';
+import {
+  InventoriesService,
+  InventoryResponseDto,
+} from '../inventories';
 
 @ApiTags('Farms — Quản lý Trang trại')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('farms')
 export class FarmsController {
-  constructor(private readonly farmsService: FarmsService) {}
+  constructor(
+    private readonly farmsService: FarmsService,
+    private readonly inventoriesService: InventoriesService,
+  ) {}
 
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({
-    summary: 'Tạo trang trại nông nghiệp mới',
+    summary: 'Tạo trang trại mới',
     description:
-      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký thông tin tọa độ, địa chỉ và chủ trại.',
+      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký thông tin trang trại mới vào hệ thống AgriLog.',
   })
   @ApiResponse({
     status: 201,
     description: 'Tạo trang trại thành công',
     type: FarmResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dữ liệu đầu vào không hợp lệ',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Chưa đăng nhập hoặc token không hợp lệ',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Không có quyền thực hiện (chỉ ADMIN, MANAGER)',
   })
   async create(@Body() dto: CreateFarmDto): Promise<FarmResponseDto> {
     return this.farmsService.create(dto);
@@ -54,40 +72,35 @@ export class FarmsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách trang trại',
+    summary: 'Danh sách trang trại (có phân trang)',
     description:
-      'Lấy toàn bộ trang trại trong hệ thống. Có thể bật tham số summary=true để tính tổng diện tích và tổng số lô canh tác.',
-  })
-  @ApiQuery({
-    name: 'summary',
-    required: false,
-    type: Boolean,
-    description: 'Bật true để trả về thông tin tổng hợp (số lô, tổng diện tích)',
+      'Truy xuất danh sách trang trại có hỗ trợ phân trang (page, limit). Bật summary=true để hiển thị tổng số lô và tổng diện tích.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách trang trại',
-    type: [FarmSummaryResponseDto],
+    description: 'Danh sách trang trại phân trang',
   })
-  async findAll(@Query('summary') summary?: string): Promise<any[]> {
+  async findAll(
+    @Query('summary') summary?: string,
+    @Query() query?: PaginationQueryDto,
+  ): Promise<IPaginatedResponse<any>> {
     const isSummary = summary === 'true' || summary === '1';
-    return this.farmsService.findAll(isSummary);
+    return this.farmsService.findAll(
+      isSummary,
+      query?.page || 1,
+      query?.limit || 10,
+    );
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Chi tiết trang trại theo ID',
-    description: 'Truy xuất thông tin cụ thể của một trang trại',
-  })
-  @ApiQuery({
-    name: 'includePlots',
-    required: false,
-    type: Boolean,
-    description: 'Bật true để lấy kèm danh sách các lô/vườn thuộc trang trại',
+    description:
+      'Lấy thông tin cụ thể của trang trại. Hỗ trợ query ?includePlots=true để đính kèm danh sách lô đất (plots) thuộc trang trại.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Chi tiết trang trại',
+    description: 'Thông tin chi tiết trang trại',
     type: FarmResponseDto,
   })
   @ApiResponse({
@@ -104,37 +117,65 @@ export class FarmsController {
 
   @Get(':id/plots')
   @ApiOperation({
-    summary: 'Danh sách các lô/vườn thuộc trang trại',
-    description: 'Truy xuất toàn bộ danh sách các lô/vườn đất canh tác trực thuộc trang trại có ID được chỉ định',
+    summary: 'Danh sách các lô/vườn thuộc trang trại (phân trang)',
+    description:
+      'Truy xuất danh sách các lô/vườn đất canh tác trực thuộc trang trại có hỗ trợ phân trang (page, limit)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách các lô/vườn canh tác',
+    description: 'Danh sách các lô/vườn canh tác phân trang',
   })
   @ApiResponse({
     status: 404,
     description: 'Trang trại không tồn tại',
   })
-  async getPlotsByFarm(@Param('id', ParseIntPipe) id: number): Promise<any[]> {
-    return this.farmsService.findPlotsByFarm(id);
+  async getPlotsByFarm(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: PaginationQueryDto,
+  ): Promise<IPaginatedResponse<any>> {
+    return this.farmsService.findPlotsByFarm(id, query.page, query.limit);
   }
 
   @Get(':id/assets')
   @ApiOperation({
-    summary: 'Danh sách tài sản / thiết bị thuộc trang trại',
+    summary: 'Danh sách tài sản / thiết bị thuộc trang trại (phân trang)',
     description:
-      'Truy xuất danh sách toàn bộ máy móc, tài sản, thiết bị cơ giới trực thuộc trang trại có ID được chỉ định',
+      'Truy xuất danh sách toàn bộ máy móc, tài sản, thiết bị cơ giới trực thuộc trang trại có hỗ trợ phân trang (page, limit)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách tài sản / máy móc',
+    description: 'Danh sách tài sản / máy móc phân trang',
   })
   @ApiResponse({
     status: 404,
     description: 'Trang trại không tồn tại',
   })
-  async getAssetsByFarm(@Param('id', ParseIntPipe) id: number): Promise<any[]> {
-    return this.farmsService.findAssetsByFarm(id);
+  async getAssetsByFarm(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: PaginationQueryDto,
+  ): Promise<IPaginatedResponse<any>> {
+    return this.farmsService.findAssetsByFarm(id, query.page, query.limit);
+  }
+
+  @Get(':id/inventories')
+  @ApiOperation({
+    summary: 'Danh sách vật tư tồn kho thuộc trang trại',
+    description:
+      'Truy xuất danh sách toàn bộ vật tư trong kho của trang trại kèm số lượng, đơn vị và phân loại vật tư.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách tồn kho vật tư của trang trại',
+    type: [InventoryResponseDto],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Trang trại không tồn tại',
+  })
+  async getInventoriesByFarm(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<InventoryResponseDto[]> {
+    return this.inventoriesService.findByFarm(id);
   }
 
   @Patch(':id')

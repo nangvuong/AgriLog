@@ -20,9 +20,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AssetsService } from './assets.service';
-import { CreateAssetDto, UpdateAssetDto, AssetResponseDto } from './dto';
+import {
+  CreateAssetDto,
+  UpdateAssetDto,
+  AssetResponseDto,
+  AssetQueryDto,
+} from './dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { AssetStatus, UserRole } from 'agrilog-shared';
+import { AssetStatus, IPaginatedResponse, UserRole } from 'agrilog-shared';
 
 @ApiTags('Assets — Quản lý Tài sản & Máy móc Trang trại')
 @ApiBearerAuth()
@@ -53,33 +58,18 @@ export class AssetsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách tài sản / thiết bị cơ giới nông nghiệp',
+    summary: 'Danh sách tài sản / thiết bị cơ giới (phân trang & bộ lọc)',
     description:
-      'Truy xuất danh sách tài sản trong hệ thống, có thể lọc theo trang trại sở hữu (farmId) hoặc trạng thái (status).',
-  })
-  @ApiQuery({
-    name: 'farmId',
-    required: false,
-    type: Number,
-    description: 'Lọc danh sách tài sản theo ID trang trại',
-  })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    enum: AssetStatus,
-    description: 'Lọc danh sách theo trạng thái (ACTIVE, MAINTENANCE, BROKEN, INACTIVE)',
+      'Truy xuất danh sách tài sản có hỗ trợ phân trang (page, limit), lọc theo trang trại sở hữu (farmId) hoặc trạng thái (status).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách tài sản / máy móc',
-    type: [AssetResponseDto],
+    description: 'Danh sách tài sản phân trang',
   })
   async findAll(
-    @Query('farmId') farmId?: string,
-    @Query('status') status?: AssetStatus,
-  ): Promise<AssetResponseDto[]> {
-    const parsedId = farmId ? parseInt(farmId, 10) : undefined;
-    return this.assetsService.findAll(parsedId, status);
+    @Query() query: AssetQueryDto,
+  ): Promise<IPaginatedResponse<AssetResponseDto>> {
+    return this.assetsService.findAll(query);
   }
 
   @Get(':id')

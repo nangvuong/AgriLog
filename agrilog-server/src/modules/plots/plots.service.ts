@@ -6,8 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PlotEntity } from './plot.entity';
-import { CreatePlotDto, UpdatePlotDto } from './dto';
+import { CreatePlotDto, UpdatePlotDto, PlotQueryDto } from './dto';
 import { FarmsService } from '../farms/farms.service';
+import { IPaginatedResponse } from 'agrilog-shared';
+import { paginateResponse } from '../../common';
 
 @Injectable()
 export class PlotsService {
@@ -18,19 +20,17 @@ export class PlotsService {
   ) {}
 
   async create(dto: CreatePlotDto): Promise<PlotEntity> {
-    // Kiểm tra trang trại tồn tại
     await this.farmsService.findOne(dto.farm_id);
 
-    // Kiểm tra trùng mã lô trong cùng trang trại
-    const existingPlot = await this.plotRepository.findOne({
+    const existing = await this.plotRepository.findOne({
       where: {
-        farm_id: Number(dto.farm_id),
+        farm_id: dto.farm_id,
         code: dto.code,
       },
     });
-    if (existingPlot) {
+    if (existing) {
       throw new ConflictException(
-        `Mã lô/vườn '${dto.code}' đã tồn tại trong trang trại ID '${dto.farm_id}'`,
+        `Lô/vườn với mã '${dto.code}' đã tồn tại trong trang trại ID '${dto.farm_id}'`,
       );
     }
 
@@ -38,12 +38,20 @@ export class PlotsService {
     return this.plotRepository.save(plot);
   }
 
-  async findAll(farmId?: number): Promise<PlotEntity[]> {
-    const whereCondition = farmId ? { farm_id: Number(farmId) } : {};
-    return this.plotRepository.find({
+  async findAll(query: PlotQueryDto = {}): Promise<IPaginatedResponse<PlotEntity>> {
+    const { farmId, status, page = 1, limit = 10 } = query;
+    const whereCondition: any = {};
+    if (farmId) whereCondition.farm_id = Number(farmId);
+    if (status) whereCondition.status = status;
+
+    const [plots, totalItems] = await this.plotRepository.findAndCount({
       where: whereCondition,
       order: { code: 'ASC' },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
     });
+
+    return paginateResponse(plots, totalItems, page, limit);
   }
 
   async findOne(id: number): Promise<PlotEntity> {

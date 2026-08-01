@@ -1,0 +1,6 @@
+export enum SeasonStatus {
+  PLANNED = 'PLANNED',
+  GROWING = 'GROWING',
+  HARVESTED = 'HARVESTED',
+  CANCELLED = 'CANCELLED',
+}

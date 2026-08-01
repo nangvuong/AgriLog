@@ -1,3 +1,5 @@
+import { IPaginationQuery } from './pagination.dto';
+
 export interface IFarmDto {
   id: number;
   name: string;
@@ -31,4 +33,8 @@ export interface IUpdateFarmDto {
 export interface IFarmSummaryDto extends IFarmDto {
   plot_count?: number;
   total_area?: number;
+}
+
+export interface IFarmQueryDto extends IPaginationQuery {
+  summary?: string | boolean;
 }

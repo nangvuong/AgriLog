@@ -20,9 +20,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PlotsService } from './plots.service';
-import { CreatePlotDto, UpdatePlotDto, PlotResponseDto } from './dto';
+import { CreatePlotDto, UpdatePlotDto, PlotResponseDto, PlotQueryDto } from './dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { UserRole } from 'agrilog-shared';
+import { IPaginatedResponse, UserRole } from 'agrilog-shared';
 
 @ApiTags('Plots — Quản lý Lô/Vườn Đất Canh tác')
 @ApiBearerAuth()
@@ -36,7 +36,7 @@ export class PlotsController {
   @ApiOperation({
     summary: 'Tạo lô/vườn canh tác mới',
     description:
-      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký lô đất với mã duy nhất trong trang trại và tọa độ đa giác GeoJSON.',
+      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký lô/vườn mới thuộc trang trại trong AgriLog.',
   })
   @ApiResponse({
     status: 201,
@@ -53,24 +53,18 @@ export class PlotsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách lô/vườn đất canh tác',
+    summary: 'Danh sách lô/vườn đất canh tác (phân trang & bộ lọc)',
     description:
-      'Truy xuất danh sách toàn bộ các lô/vườn trong hệ thống hoặc lọc theo ID trang trại.',
-  })
-  @ApiQuery({
-    name: 'farmId',
-    required: false,
-    type: Number,
-    description: 'Lọc danh sách các lô thuộc một trang trại cụ thể',
+      'Truy xuất danh sách lô/vườn có hỗ trợ phân trang (page, limit) và lọc theo trang trại (farmId) hoặc trạng thái (status).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách lô/vườn',
-    type: [PlotResponseDto],
+    description: 'Danh sách lô/vườn phân trang',
   })
-  async findAll(@Query('farmId') farmId?: string): Promise<PlotResponseDto[]> {
-    const parsedId = farmId ? parseInt(farmId, 10) : undefined;
-    return this.plotsService.findAll(parsedId);
+  async findAll(
+    @Query() query: PlotQueryDto,
+  ): Promise<IPaginatedResponse<PlotResponseDto>> {
+    return this.plotsService.findAll(query);
   }
 
   @Get(':id')

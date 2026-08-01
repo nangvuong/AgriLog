@@ -24,9 +24,10 @@ import {
   CreateCropVarietyDto,
   UpdateCropVarietyDto,
   CropVarietyResponseDto,
+  CropVarietyQueryDto,
 } from './dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '../../common';
-import { UserRole } from 'agrilog-shared';
+import { IPaginatedResponse, UserRole } from 'agrilog-shared';
 
 @ApiTags('Crop Varieties — Quản lý Giống Cây Trồng')
 @ApiBearerAuth()
@@ -38,9 +39,9 @@ export class CropVarietiesController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({
-    summary: 'Tạo giống cây trồng mới',
+    summary: 'Tạo giống cây trồng mới cho loại cây cụ thể',
     description:
-      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký giống cây mới (Da Xanh, Năm Roi, Ri6...) thuộc một loại cây trồng.',
+      'Chỉ dành cho ADMIN hoặc MANAGER. Đăng ký giống cây (e.g. Bưởi Da Xanh, Sầu Riêng Ri6...).',
   })
   @ApiResponse({
     status: 201,
@@ -57,24 +58,18 @@ export class CropVarietiesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách giống cây trồng',
+    summary: 'Danh sách giống cây trồng (phân trang & bộ lọc)',
     description:
-      'Truy xuất danh sách toàn bộ giống cây trong hệ thống hoặc lọc theo ID loại cây trồng (cropId).',
-  })
-  @ApiQuery({
-    name: 'cropId',
-    required: false,
-    type: Number,
-    description: 'Lọc danh sách các giống cây thuộc một loại cây trồng cụ thể',
+      'Truy xuất danh sách giống cây có hỗ trợ phân trang (page, limit) và lọc theo ID loại cây trồng (cropId).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách giống cây',
-    type: [CropVarietyResponseDto],
+    description: 'Danh sách giống cây phân trang',
   })
-  async findAll(@Query('cropId') cropId?: string): Promise<CropVarietyResponseDto[]> {
-    const parsedId = cropId ? parseInt(cropId, 10) : undefined;
-    return this.cropVarietiesService.findAll(parsedId);
+  async findAll(
+    @Query() query: CropVarietyQueryDto,
+  ): Promise<IPaginatedResponse<CropVarietyResponseDto>> {
+    return this.cropVarietiesService.findAll(query);
   }
 
   @Get(':id')

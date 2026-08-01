@@ -13,6 +13,11 @@ import {
   CropVarietiesModule,
   MaterialsModule,
   AssetsModule,
+  SeasonsModule,
+  ActivitiesModule,
+  ObservationsModule,
+  InventoriesModule,
+  HarvestsModule,
 } from './modules';
 import { databaseConfig, redisConfig } from './config';
 
@@ -32,6 +37,11 @@ import { databaseConfig, redisConfig } from './config';
     CropVarietiesModule,
     MaterialsModule,
     AssetsModule,
+    SeasonsModule,
+    ActivitiesModule,
+    ObservationsModule,
+    InventoriesModule,
+    HarvestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

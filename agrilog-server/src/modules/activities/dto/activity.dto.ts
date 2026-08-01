@@ -1,0 +1,279 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import {
+  AiStatus,
+  IActivityDto,
+  ICreateActivityDto,
+  IUpdateActivityDto,
+  SourceType,
+} from 'agrilog-shared';
+import {
+  ActivityAssetResponseDto,
+  ActivityMaterialResponseDto,
+  CreateActivityAssetDto,
+  CreateActivityMaterialDto,
+} from './activity-resources.dto';
+
+export class CreateActivityDto implements ICreateActivityDto {
+  @ApiProperty({ example: 1, description: 'ID vụ mùa (Season)' })
+  @Type(() => Number)
+  @IsNotEmpty()
+  @IsInt()
+  season_id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID người nông dân thực hiện' })
+  @Type(() => Number)
+  @IsNotEmpty()
+  @IsInt()
+  farmer_id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID loại hoạt động canh tác (ActivityType)' })
+  @Type(() => Number)
+  @IsNotEmpty()
+  @IsInt()
+  activity_type_id!: number;
+
+  @ApiPropertyOptional({
+    example: 'Bón lót phân hữu cơ vi sinh Đầu Trâu đầu vụ cho Lô A',
+    description: 'Mô tả hoạt động canh tác',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    example: 'Bón quanh tán cây, kết hợp xới nhẹ mặt đất',
+    description: 'Ghi chú thêm',
+  })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiProperty({
+    example: '2026-08-01T07:30:00Z',
+    description: 'Thời gian bắt đầu hoạt động (ISO Date)',
+  })
+  @IsNotEmpty()
+  @IsDateString()
+  start_time!: string | Date;
+
+  @ApiPropertyOptional({
+    example: '2026-08-01T10:00:00Z',
+    description: 'Thời gian kết thúc hoạt động (ISO Date)',
+  })
+  @IsOptional()
+  @IsDateString()
+  end_time?: string | Date;
+
+  @ApiPropertyOptional({ example: 10.29845, description: 'Vĩ độ điểm ghi nhận' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 106.3421, description: 'Kinh độ điểm ghi nhận' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
+
+  @ApiPropertyOptional({
+    enum: SourceType,
+    example: SourceType.MANUAL,
+    description: 'Nguồn ghi nhận dữ liệu (VOICE, TEXT, IMAGE, MANUAL)',
+    default: SourceType.MANUAL,
+  })
+  @IsOptional()
+  @IsEnum(SourceType)
+  source_type?: SourceType = SourceType.MANUAL;
+
+  @ApiPropertyOptional({
+    enum: AiStatus,
+    example: AiStatus.CONFIRMED,
+    description: 'Trạng thái xử lý AI (nếu ghi từ VOICE/IMAGE)',
+  })
+  @IsOptional()
+  @IsEnum(AiStatus)
+  ai_status?: AiStatus;
+
+  @ApiPropertyOptional({
+    type: [CreateActivityMaterialDto],
+    description: 'Danh sách vật tư sử dụng trong hoạt động',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityMaterialDto)
+  materials?: CreateActivityMaterialDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateActivityAssetDto],
+    description: 'Danh sách máy móc/thiết bị sử dụng trong hoạt động',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityAssetDto)
+  assets?: CreateActivityAssetDto[];
+}
+
+export class UpdateActivityDto implements IUpdateActivityDto {
+  @ApiPropertyOptional({ example: 1, description: 'ID vụ mùa (Season)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  season_id?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID người nông dân thực hiện' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  farmer_id?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID loại hoạt động canh tác' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  activity_type_id?: number;
+
+  @ApiPropertyOptional({ description: 'Mô tả hoạt động canh tác' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Ghi chú thêm' })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiPropertyOptional({ description: 'Thời gian bắt đầu (ISO Date)' })
+  @IsOptional()
+  @IsDateString()
+  start_time?: string | Date;
+
+  @ApiPropertyOptional({ description: 'Thời gian kết thúc (ISO Date)' })
+  @IsOptional()
+  @IsDateString()
+  end_time?: string | Date;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
+
+  @ApiPropertyOptional({ enum: SourceType, description: 'Nguồn ghi nhận' })
+  @IsOptional()
+  @IsEnum(SourceType)
+  source_type?: SourceType;
+
+  @ApiPropertyOptional({ enum: AiStatus, description: 'Trạng thái AI' })
+  @IsOptional()
+  @IsEnum(AiStatus)
+  ai_status?: AiStatus;
+
+  @ApiPropertyOptional({
+    type: [CreateActivityMaterialDto],
+    description: 'Danh sách vật tư cập nhật sử dụng',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityMaterialDto)
+  materials?: CreateActivityMaterialDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateActivityAssetDto],
+    description: 'Danh sách máy móc/thiết bị cập nhật sử dụng',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityAssetDto)
+  assets?: CreateActivityAssetDto[];
+}
+
+export class ActivityResponseDto implements IActivityDto {
+  @ApiProperty({ example: 1, description: 'ID nhật ký hoạt động' })
+  id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID vụ mùa' })
+  season_id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID nông dân' })
+  farmer_id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID loại hoạt động' })
+  activity_type_id!: number;
+
+  @ApiPropertyOptional({ description: 'Mô tả hoạt động' })
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Ghi chú' })
+  note?: string;
+
+  @ApiProperty({ description: 'Thời gian bắt đầu' })
+  start_time!: string | Date;
+
+  @ApiPropertyOptional({ description: 'Thời gian kết thúc' })
+  end_time?: string | Date | null;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ' })
+  latitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ' })
+  longitude?: number;
+
+  @ApiProperty({ enum: SourceType, description: 'Nguồn ghi nhận dữ liệu' })
+  source_type!: SourceType;
+
+  @ApiPropertyOptional({ enum: AiStatus, description: 'Trạng thái xử lý AI' })
+  ai_status?: AiStatus | null;
+
+  @ApiProperty({ description: 'Thời gian tạo' })
+  created_at!: string | Date;
+
+  @ApiProperty({ description: 'Thời gian cập nhật gần nhất' })
+  updated_at!: string | Date;
+
+  @ApiPropertyOptional({ example: 'Vụ Xuân Hè 2026', description: 'Tên/mô tả vụ mùa' })
+  season_name?: string;
+
+  @ApiPropertyOptional({ example: 'Nguyễn Văn A', description: 'Họ tên nông dân thực hiện' })
+  farmer_name?: string;
+
+  @ApiPropertyOptional({ example: 'FERTILIZE', description: 'Mã loại hoạt động' })
+  activity_type_code?: string;
+
+  @ApiPropertyOptional({ example: 'Bón phân', description: 'Tên loại hoạt động' })
+  activity_type_name?: string;
+
+  @ApiPropertyOptional({
+    type: [ActivityMaterialResponseDto],
+    description: 'Danh sách vật tư sử dụng trong hoạt động',
+  })
+  materials?: ActivityMaterialResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [ActivityAssetResponseDto],
+    description: 'Danh sách máy móc / thiết bị sử dụng trong hoạt động',
+  })
+  assets?: ActivityAssetResponseDto[];
+}

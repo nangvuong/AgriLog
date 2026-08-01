@@ -6,3 +6,8 @@ export * from './crops';
 export * from './crop-varieties';
 export * from './materials';
 export * from './assets';
+export * from './seasons';
+export * from './activities';
+export * from './observations';
+export * from './inventories';
+export * from './harvests';

@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FarmEntity } from './farm.entity';
 import { CreateFarmDto, UpdateFarmDto, FarmSummaryResponseDto } from './dto';
+import { IPaginatedResponse } from 'agrilog-shared';
+import { paginateResponse } from '../../common';
+
 
 @Injectable()
 export class FarmsService {
@@ -16,14 +19,23 @@ export class FarmsService {
     return this.farmRepository.save(farm);
   }
 
-  async findAll(summary: boolean = false): Promise<any[]> {
+  async findAll(
+    summary: boolean = false,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<IPaginatedResponse<any>> {
+    const skip = (Number(page) - 1) * Number(limit);
+    const take = Number(limit);
+
     if (summary) {
-      const farmsWithPlots = await this.farmRepository.find({
+      const [farmsWithPlots, totalItems] = await this.farmRepository.findAndCount({
         relations: ['plots'],
         order: { created_at: 'DESC' },
+        skip,
+        take,
       });
 
-      return farmsWithPlots.map((farm) => {
+      const enriched = farmsWithPlots.map((farm) => {
         const plots = farm.plots || [];
         const plot_count = plots.length;
         const total_area = plots.reduce((sum, plot) => {
@@ -39,11 +51,17 @@ export class FarmsService {
           total_area: Math.round(total_area * 100) / 100,
         };
       });
+
+      return paginateResponse(enriched, totalItems, page, limit);
     }
 
-    return this.farmRepository.find({
+    const [farms, totalItems] = await this.farmRepository.findAndCount({
       order: { created_at: 'DESC' },
+      skip,
+      take,
     });
+
+    return paginateResponse(farms, totalItems, page, limit);
   }
 
   async findOne(id: number, includePlots: boolean = false): Promise<FarmEntity> {
@@ -57,7 +75,11 @@ export class FarmsService {
     return farm;
   }
 
-  async findPlotsByFarm(id: number): Promise<any[]> {
+  async findPlotsByFarm(
+    id: number,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<IPaginatedResponse<any>> {
     const farm = await this.farmRepository.findOne({
       where: { id: Number(id) },
       relations: ['plots'],
@@ -65,10 +87,18 @@ export class FarmsService {
     if (!farm) {
       throw new NotFoundException(`Trang trại với ID '${id}' không tồn tại`);
     }
-    return (farm.plots || []).sort((a, b) => a.code.localeCompare(b.code));
+    const allPlots = (farm.plots || []).sort((a, b) => a.code.localeCompare(b.code));
+    const totalItems = allPlots.length;
+    const startIndex = (Number(page) - 1) * Number(limit);
+    const data = allPlots.slice(startIndex, startIndex + Number(limit));
+    return paginateResponse(data, totalItems, page, limit);
   }
 
-  async findAssetsByFarm(id: number): Promise<any[]> {
+  async findAssetsByFarm(
+    id: number,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<IPaginatedResponse<any>> {
     const farm = await this.farmRepository.findOne({
       where: { id: Number(id) },
       relations: ['assets'],
@@ -76,7 +106,11 @@ export class FarmsService {
     if (!farm) {
       throw new NotFoundException(`Trang trại với ID '${id}' không tồn tại`);
     }
-    return (farm.assets || []).sort((a, b) => a.name.localeCompare(b.name));
+    const allAssets = (farm.assets || []).sort((a, b) => a.name.localeCompare(b.name));
+    const totalItems = allAssets.length;
+    const startIndex = (Number(page) - 1) * Number(limit);
+    const data = allAssets.slice(startIndex, startIndex + Number(limit));
+    return paginateResponse(data, totalItems, page, limit);
   }
 
   async update(id: number, dto: UpdateFarmDto): Promise<FarmEntity> {

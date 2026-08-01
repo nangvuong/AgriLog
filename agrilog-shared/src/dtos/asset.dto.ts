@@ -1,4 +1,5 @@
 import { AssetStatus } from '../enums/asset.enum';
+import { IPaginationQuery } from './pagination.dto';
 
 export interface IAssetDto {
   id: number;
@@ -27,5 +28,10 @@ export interface IUpdateAssetDto {
   type?: string;
   serial_number?: string;
   purchase_date?: string | Date;
+  status?: AssetStatus;
+}
+
+export interface IAssetQueryDto extends IPaginationQuery {
+  farmId?: number;
   status?: AssetStatus;
 }

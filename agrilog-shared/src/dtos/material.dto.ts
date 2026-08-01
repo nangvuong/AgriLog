@@ -1,3 +1,5 @@
+import { IPaginationQuery } from './pagination.dto';
+
 export interface IMaterialDto {
   id: number;
   name: string;
@@ -23,4 +25,8 @@ export interface IUpdateMaterialDto {
   manufacturer?: string;
   default_unit?: string;
   description?: string;
+}
+
+export interface IMaterialQueryDto extends IPaginationQuery {
+  category?: string;
 }
