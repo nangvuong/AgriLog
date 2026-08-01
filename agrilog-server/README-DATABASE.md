@@ -8,11 +8,13 @@ Hệ thống cơ sở dữ liệu **Nhật ký bưởi xuất khẩu (`agrilog_d
 
 | Dịch vụ | Image | Container Name | Cổng (Port) | Mô tả |
 | :--- | :--- | :--- | :--- | :--- |
-| **postgres** | `postgis/postgis:16-3.4` | `agrilog-postgres` | `5432:5432` | PostgreSQL 16 tích hợp PostGIS kèm Persistent Volume |
+| **postgres** | `postgis/postgis:16-3.4` | `agrilog-postgres` | `5433:5432` | PostgreSQL 16 tích hợp PostGIS kèm Persistent Volume (Cổng host `5433` -> Cổng container `5432`) |
 
 > [!NOTE]
 > Tại sao sử dụng image `postgis/postgis:16-3.4` thay vì `postgres:16`?
 > Trong file [schema_nhat_ky_buoi.sql](file:///Users/nangvuong/Desktop/AgriLog/agrilog-server/schema_nhat_ky_buoi.sql#L10) sử dụng extension `postgis` và kiểu dữ liệu `GEOGRAPHY(POINT, 4326)` để lưu trữ tọa độ vườn/lô đất. Image chuẩn của PostgreSQL không cài sẵn PostGIS, do đó bắt buộc dùng image `postgis/postgis`.
+> 
+> **Lưu ý về cổng (Port):** Cổng ngoài Host mặc định là `5433` được ánh xạ vào cổng `5432` bên trong Container PostgreSQL (`5433:5432`). Việc dùng cổng `5433` giúp tránh xung đột với các ứng dụng PostgreSQL khác đang chạy trên cổng mặc định `5432`.
 
 ---
 
@@ -22,7 +24,7 @@ Các thông số cấu hình nằm trong file [`.env`](file:///Users/nangvuong/D
 
 ```env
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+POSTGRES_PORT=5433
 POSTGRES_DB=agrilog_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres

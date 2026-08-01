@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trang chủ · Nhật Ký Vườn Bưởi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green-deep:#1F3A2E;
+    --green-mid:#345645;
+    --green-soft:#8FAE94;
+    --gold:#D9A441;
+    --gold-dark:#B9862F;
+    --gold-soft:#F7EDD6;
+    --red:#B84C3C;
+    --red-soft:#F5E3DE;
+    --paper:#FBF8F1;
+    --paper-shell:#EFE9D8;
+    --paper-line:#E4DCC8;
+    --soil:#4A3826;
+    --ink:#23301F;
+    --ink-soft:#5C6B57;
+    --white:#F5F2E8;
+    --radius:14px;
+    --radius-sm:10px;
+    --shadow:0 1px 2px rgba(35,48,31,0.05), 0 10px 24px -14px rgba(35,48,31,0.28);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    background:var(--paper-shell);
+  }
+  button{font-family:inherit;}
+  ::-webkit-scrollbar{display:none;}
+
+  /* ============ APP SHELL ============ */
+  .app-shell{
+    max-width:480px;
+    margin:0 auto;
+    height:100vh;
+    background:var(--paper);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  @media (min-width:481px){
+    body{ display:flex; align-items:center; justify-content:center; padding:28px 0;}
+    .app-shell{ height:min(860px, 92vh); box-shadow:0 30px 60px -20px rgba(35,48,31,0.35); border-radius:28px; }
+  }
+
+  .scroll-area{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* ============ HEADER ============ */
+  .app-header{
+    background:var(--green-deep);
+    color:var(--white);
+    padding:22px 20px 46px 20px;
+    position:relative;
+    overflow:hidden;
+  }
+  .app-header::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:radial-gradient(circle, var(--gold) 2px, transparent 2.2px);
+    background-size:40px 40px;
+    opacity:0.12;
+  }
+  .header-row{
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+  }
+  .greeting .eyebrow{
+    font-size:11.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--green-soft);
+    font-weight:500;
+  }
+  .greeting h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:23px;
+    margin:4px 0 0 0;
+  }
+  .header-meta{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+    font-size:12.5px;
+    color:var(--green-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .header-meta span{ display:flex; align-items:center; gap:5px; }
+
+  .bell-btn{
+    position:relative;
+    background:rgba(245,242,232,0.1);
+    border:1px solid rgba(245,242,232,0.2);
+    width:38px;height:38px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .bell-btn svg{ width:17px;height:17px; stroke:var(--white); }
+  .bell-dot{
+    position:absolute; top:6px; right:7px;
+    width:8px;height:8px;
+    background:var(--red);
+    border:1.5px solid var(--green-deep);
+    border-radius:50%;
+  }
+
+  /* ============ ALERTS ============ */
+  .alerts-wrap{
+    position:relative;
+    margin-top:-26px;
+    padding-left:20px;
+  }
+  .alerts-row{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    padding-bottom:6px;
+    padding-right:20px;
+    scroll-snap-type:x mandatory;
+  }
+  .alert-card{
+    scroll-snap-align:start;
+    flex:0 0 auto;
+    width:250px;
+    background:var(--white);
+    border-radius:var(--radius);
+    padding:14px 15px;
+    box-shadow:var(--shadow);
+    border-left:4px solid var(--red);
+  }
+  .alert-card.warn{ border-left-color:var(--gold); }
+  .alert-card .tag{
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--red);
+  }
+  .alert-card.warn .tag{ color:var(--gold-dark); }
+  .alert-card p{
+    font-size:13px;
+    line-height:1.45;
+    margin:6px 0 10px 0;
+    color:var(--ink);
+  }
+  .alert-card a{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--green-mid);
+    text-decoration:none;
+  }
+
+  /* ============ SECTIONS ============ */
+  .section{ padding:26px 20px 4px 20px; }
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .section-head h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:18px;
+    margin:0;
+  }
+  .section-head a{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    text-decoration:none;
+    font-weight:500;
+  }
+
+  /* ============ SEASON CARDS ============ */
+  .season-card{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    background:#fff;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:12px;
+  }
+  .ring-wrap{ position:relative; flex-shrink:0; width:52px; height:52px; }
+  .ring-wrap svg{ width:52px; height:52px; transform:rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--paper-line); stroke-width:4; }
+  .ring-progress{ fill:none; stroke:var(--gold); stroke-width:4; stroke-linecap:round; }
+  .ring-label{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    font-weight:500;
+    color:var(--ink);
+  }
+  .season-info{ flex:1; min-width:0; }
+  .season-info .name{
+    font-weight:600;
+    font-size:14.5px;
+    color:var(--ink);
+    margin:0 0 2px 0;
+  }
+  .season-info .meta{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+  .season-info .status-row{
+    display:flex; gap:6px; margin-top:7px; flex-wrap:wrap;
+  }
+  .pill{
+    font-size:10.5px;
+    font-family:'IBM Plex Mono', monospace;
+    padding:3px 8px;
+    border-radius:100px;
+    background:var(--paper-shell);
+    color:var(--ink-soft);
+  }
+  .pill.pill-red{ background:var(--red-soft); color:var(--red); }
+  .season-card .go-btn{
+    flex-shrink:0;
+    width:34px;height:34px;
+    border-radius:50%;
+    border:1px solid var(--paper-line);
+    background:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .season-card .go-btn svg{ width:14px; height:14px; stroke:var(--green-mid); }
+
+  /* ============ RECENT ACTIVITY ============ */
+  .activity-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 0;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .activity-item:last-child{ border-bottom:none; }
+  .activity-icon{
+    width:34px;height:34px;
+    border-radius:50%;
+    background:var(--gold-soft);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .activity-icon svg{ width:16px;height:16px; stroke:var(--gold-dark); }
+  .activity-text .title{ font-size:13.5px; font-weight:500; margin:0; }
+  .activity-text .sub{ font-size:12px; color:var(--ink-soft); margin:2px 0 0 0; }
+
+  .bottom-spacer{ height:110px; }
+
+  /* ============ BOTTOM NAV ============ */
+  .bottom-nav{
+    position:absolute; left:0; right:0; bottom:0;
+    background:#fff;
+    border-top:1px solid var(--paper-line);
+    display:flex;
+    padding:9px 6px calc(9px + env(safe-area-inset-bottom,0px)) 6px;
+    z-index:20;
+  }
+  .nav-btn{
+    flex:1;
+    background:none;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:5px 0;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .nav-btn svg{ width:19px; height:19px; stroke:var(--ink-soft); }
+  .nav-btn span{ font-size:10.5px; font-weight:500; }
+  .nav-btn.active{ color:var(--green-deep); }
+  .nav-btn.active svg{ stroke:var(--green-deep); }
+
+  /* ============ FAB ============ */
+  .fab{
+    position:absolute;
+    right:18px;
+    bottom:78px;
+    width:56px; height:56px;
+    border-radius:50%;
+    background:var(--gold);
+    border:none;
+    box-shadow:0 10px 20px -6px rgba(185,134,47,0.55);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    z-index:25;
+    transition:transform 0.15s ease;
+  }
+  .fab:hover{ background:var(--gold-dark); }
+  .fab:active{ transform:scale(0.95); }
+  .fab svg{ width:22px;height:22px; stroke:var(--soil); }
+
+  /* ============ BOTTOM SHEET ============ */
+  .sheet-backdrop{
+    position:absolute; inset:0;
+    background:rgba(31,58,46,0.4);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s ease;
+    z-index:30;
+  }
+  .sheet-backdrop.open{ opacity:1; pointer-events:auto; }
+
+  .bottom-sheet{
+    position:absolute; left:0; right:0; bottom:0;
+    max-height:88%;
+    background:var(--paper);
+    border-radius:20px 20px 0 0;
+    transform:translateY(100%);
+    transition:transform 0.28s cubic-bezier(.32,.72,0,1);
+    z-index:31;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 -10px 30px rgba(35,48,31,0.2);
+  }
+  .bottom-sheet.open{ transform:translateY(0); }
+  @media (prefers-reduced-motion:reduce){
+    .bottom-sheet, .sheet-backdrop{ transition:none; }
+  }
+
+  .sheet-handle{
+    width:36px;height:4px;
+    background:var(--paper-line);
+    border-radius:100px;
+    margin:10px auto 6px auto;
+  }
+  .sheet-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 18px 12px 18px;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .sheet-head h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+    margin:0;
+  }
+  .close-btn{
+    background:none;border:none;cursor:pointer;
+    width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);
+  }
+  .close-btn svg{ width:16px;height:16px; stroke:var(--ink-soft); }
+
+  .sheet-body{
+    padding:16px 18px 20px 18px;
+    overflow-y:auto;
+  }
+  .sheet-label{
+    font-size:12px; font-weight:600; letter-spacing:0.03em;
+    color:var(--soil); margin:0 0 9px 0; text-transform:uppercase;
+  }
+
+  .season-select{
+    display:flex; gap:8px; overflow-x:auto; margin-bottom:20px;
+  }
+  .chip{
+    flex-shrink:0;
+    font-size:12.5px; font-weight:500;
+    padding:8px 13px;
+    border-radius:100px;
+    border:1.5px solid var(--paper-line);
+    background:#fff;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .chip.active{ background:var(--green-deep); border-color:var(--green-deep); color:var(--white); }
+
+  .activity-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:8px;
+    margin-bottom:22px;
+  }
+  .activity-choice{
+    background:#fff;
+    border:1.5px solid var(--paper-line);
+    border-radius:var(--radius-sm);
+    padding:10px 4px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
+  }
+  .activity-choice svg{ width:19px;height:19px; stroke:var(--green-mid); }
+  .activity-choice span{ font-size:10px; text-align:center; line-height:1.2; color:var(--ink-soft); font-weight:500; }
+  .activity-choice.active{ border-color:var(--gold); background:var(--gold-soft); }
+  .activity-choice.active svg{ stroke:var(--gold-dark); }
+  .activity-choice.active span{ color:var(--soil); }
+
+  .channel-tabs{
+    display:flex;
+    background:var(--paper-shell);
+    border-radius:100px;
+    padding:3px;
+    margin-bottom:16px;
+  }
+  .channel-tab{
+    flex:1;
+    border:none;
+    background:none;
+    padding:9px 0;
+    font-size:12.5px;
+    font-weight:600;
+    border-radius:100px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .channel-tab.active{ background:#fff; color:var(--green-deep); box-shadow:var(--shadow); }
+  .channel-tab svg{ width:14px;height:14px; }
+
+  .channel-pane{ min-height:140px; }
+  [hidden]{ display:none !important; }
+
+  .mic-zone{
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    padding:20px 10px;
+  }
+  .mic-btn{
+    width:66px;height:66px;
+    border-radius:50%;
+    background:var(--red-soft);
+    border:2px solid var(--red);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .mic-btn svg{ width:24px;height:24px; stroke:var(--red); }
+  .mic-hint{ font-size:12.5px; color:var(--ink-soft); }
+  .waveform{ display:flex; gap:3px; align-items:flex-end; height:22px; }
+  .waveform span{ width:3px; background:var(--green-soft); border-radius:2px; }
+
+  .cam-zone{
+    display:flex; flex-direction:column; gap:12px; padding:6px 0 16px 0;
+  }
+  .cam-drop{
+    border:1.5px dashed var(--paper-line);
+    border-radius:var(--radius-sm);
+    padding:22px 10px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .cam-drop svg{ width:22px;height:22px; stroke:var(--green-mid); margin-bottom:6px; }
+
+  textarea.note-input{
+    width:100%;
+    border:1.5px solid var(--paper-line);
+    border-radius:var(--radius-sm);
+    padding:11px 13px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13.5px;
+    resize:none;
+    outline:none;
+    min-height:90px;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea.note-input:focus{ border-color:var(--green-mid); box-shadow:0 0 0 3px rgba(52,86,69,0.12); }
+
+  .supply-row{ display:flex; gap:8px; margin-top:12px; }
+  .supply-row input{
+    border:1.5px solid var(--paper-line);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+    font-size:13px;
+    outline:none;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .supply-row input:focus{ border-color:var(--green-mid); }
+  .supply-row .sup-name{ flex:2; }
+  .supply-row .sup-amt{ flex:1; font-family:'IBM Plex Mono', monospace; }
+
+  .sheet-footer{
+    padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px)) 18px;
+    border-top:1px solid var(--paper-line);
+  }
+  .save-btn{
+    width:100%;
+    background:var(--gold);
+    color:var(--soil);
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:14px;
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .save-btn:hover{ background:var(--gold-dark); }
+  :focus-visible{ outline:2.5px solid var(--green-deep); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="scroll-area">
+
+    <!-- ===== HEADER ===== -->
+    <header class="app-header">
+      <div class="header-row">
+        <div class="greeting">
+          <div class="eyebrow">Thứ Tư, 29/07</div>
+          <h1>Chào anh Tư 👋</h1>
+          <div class="header-meta">
+            <span>☀ 31°C, nắng nhẹ</span>
+          </div>
+        </div>
+        <button class="bell-btn" aria-label="Thông báo">
+          <span class="bell-dot"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== ALERTS ===== -->
+    <div class="alerts-wrap">
+      <div class="alerts-row">
+        <div class="alert-card">
+          <div class="tag">Cần chú ý</div>
+          <p>Lô A2 còn <strong>2 vật tư</strong> chưa hết thời gian cách ly. Dự kiến thu hoạch trong 3 ngày.</p>
+          <a href="#">Xem chi tiết →</a>
+        </div>
+        <div class="alert-card warn">
+          <div class="tag">Sắp tới</div>
+          <p>Lô B1 nên <strong>tưới nước</strong> trong 2 ngày tới theo lịch chăm sóc.</p>
+          <a href="#">Xem chi tiết →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SEASONS ===== -->
+    <section class="section">
+      <div class="section-head">
+        <h2>Vụ mùa đang canh tác</h2>
+        <a href="#">Xem tất cả</a>
+      </div>
+
+      <div class="season-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 52 52">
+            <circle class="ring-track" cx="26" cy="26" r="21"/>
+            <circle class="ring-progress" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="39.6"/>
+          </svg>
+          <span class="ring-label">70%</span>
+        </div>
+        <div class="season-info">
+          <p class="name">Lô A2 · Da Xanh</p>
+          <p class="meta">Vụ 2026 · Ra hoa 12/03</p>
+          <div class="status-row">
+            <span class="pill pill-red">Còn 3 ngày</span>
+            <span class="pill">120 cây</span>
+          </div>
+        </div>
+        <button class="go-btn" aria-label="Xem vụ mùa">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="season-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 52 52">
+            <circle class="ring-track" cx="26" cy="26" r="21"/>
+            <circle class="ring-progress" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="79.1"/>
+          </svg>
+          <span class="ring-label">40%</span>
+        </div>
+        <div class="season-info">
+          <p class="name">Lô B1 · Năm Roi</p>
+          <p class="meta">Vụ 2026 · Ra hoa 02/05</p>
+          <div class="status-row">
+            <span class="pill">Đang canh tác</span>
+            <span class="pill">86 cây</span>
+          </div>
+        </div>
+        <button class="go-btn" aria-label="Xem vụ mùa">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="season-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 52 52">
+            <circle class="ring-track" cx="26" cy="26" r="21"/>
+            <circle class="ring-progress" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="112.1"/>
+          </svg>
+          <span class="ring-label">15%</span>
+        </div>
+        <div class="season-info">
+          <p class="name">Lô C3 · Diễn</p>
+          <p class="meta">Vụ 2026 · Ra hoa 18/06</p>
+          <div class="status-row">
+            <span class="pill">Đang canh tác</span>
+            <span class="pill">64 cây</span>
+          </div>
+        </div>
+        <button class="go-btn" aria-label="Xem vụ mùa">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== RECENT ACTIVITY ===== -->
+    <section class="section">
+      <div class="section-head">
+        <h2>Hoạt động gần đây</h2>
+        <a href="#">Lịch sử →</a>
+      </div>
+
+      <div class="activity-item">
+        <div class="activity-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+        </div>
+        <div class="activity-text">
+          <p class="title">Phun thuốc trừ sâu — Lô A2</p>
+          <p class="sub">Hôm nay, 07:20</p>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M12 22c4-2 7-5.5 7-10a7 7 0 0 0-14 0c0 4.5 3 8 7 10z"/></svg>
+        </div>
+        <div class="activity-text">
+          <p class="title">Tưới nước — Lô B1</p>
+          <p class="sub">Hôm qua, 16:40</p>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 21V9m8 12V3m8 18v-6"/></svg>
+        </div>
+        <div class="activity-text">
+          <p class="title">Bón phân NPK — Lô C3</p>
+          <p class="sub">3 ngày trước</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="bottom-spacer"></div>
+  </div>
+
+  <!-- ===== FAB ===== -->
+  <button class="fab" aria-label="Ghi nhật ký nhanh" onclick="openSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span>Trang chủ</span>
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg>
+      <span>Nhật ký</span>
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 17h.01"/></svg>
+      <span>Cảnh báo</span>
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.5-4 4.5-6 7-6s5.5 2 7 6"/></svg>
+      <span>Hồ sơ</span>
+    </button>
+  </nav>
+
+  <!-- ===== BOTTOM SHEET: GHI NHẬT KÝ NHANH ===== -->
+  <div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
+  <div class="bottom-sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h3>Ghi nhật ký nhanh</h3>
+      <button class="close-btn" onclick="closeSheet()" aria-label="Đóng">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+      <p class="sheet-label">Chọn vụ mùa</p>
+      <div class="season-select">
+        <button class="chip active">Lô A2 · Da Xanh</button>
+        <button class="chip">Lô B1 · Năm Roi</button>
+        <button class="chip">Lô C3 · Diễn</button>
+      </div>
+
+      <p class="sheet-label">Loại hoạt động</p>
+      <div class="activity-grid">
+        <div class="activity-choice active">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M12 22c4-2 7-5.5 7-10a7 7 0 0 0-14 0c0 4.5 3 8 7 10z"/></svg>
+          <span>Phun thuốc</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 21V9m8 12V3m8 18v-6"/></svg>
+          <span>Bón phân</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+          <span>Tưới nước</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 4l12 16M18 4L6 20"/></svg>
+          <span>Tỉa cành</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M3 20h18M6 20V10l6-6 6 6v10"/></svg>
+          <span>Làm cỏ</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/></svg>
+          <span>Bẻ quả</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span>Sâu bệnh</span>
+        </div>
+        <div class="activity-choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
+          <span>Khác</span>
+        </div>
+      </div>
+
+      <p class="sheet-label">Ghi bằng</p>
+      <div class="channel-tabs">
+        <button class="channel-tab active" onclick="showChannel('mic')">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+          Nói
+        </button>
+        <button class="channel-tab" onclick="showChannel('cam')">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+          Chụp
+        </button>
+        <button class="channel-tab" onclick="showChannel('text')">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 20l1.3-4L17 4.5a1.8 1.8 0 0 1 2.5 2.5L8 18.7 4 20z"/></svg>
+          Gõ
+        </button>
+      </div>
+
+      <div class="channel-pane" id="pane-mic">
+        <div class="mic-zone">
+          <button class="mic-btn" aria-label="Nhấn giữ để nói">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+          </button>
+          <p class="mic-hint">Nhấn giữ và nói, ví dụ: "Phun thuốc Regent 50ml cho lô A2"</p>
+          <div class="waveform" aria-hidden="true">
+            <span style="height:8px"></span><span style="height:16px"></span><span style="height:10px"></span>
+            <span style="height:20px"></span><span style="height:6px"></span><span style="height:14px"></span>
+            <span style="height:9px"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="channel-pane" id="pane-cam" hidden>
+        <div class="cam-zone">
+          <div class="cam-drop">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            <div>Chạm để chụp ảnh minh chứng<br>hoặc chụp nhãn vật tư để tự nhận diện</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="channel-pane" id="pane-text" hidden>
+        <textarea class="note-input" placeholder="Mô tả công việc đã làm hôm nay..."></textarea>
+      </div>
+
+      <div class="supply-row">
+        <input class="sup-name" type="text" placeholder="Tên vật tư (VD: Regent)">
+        <input class="sup-amt" type="text" placeholder="50 ml">
+      </div>
+    </div>
+
+    <div class="sheet-footer">
+      <button class="save-btn">Lưu nhật ký</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function openSheet(){
+    document.getElementById('sheet').classList.add('open');
+    document.getElementById('backdrop').classList.add('open');
+  }
+  function closeSheet(){
+    document.getElementById('sheet').classList.remove('open');
+    document.getElementById('backdrop').classList.remove('open');
+  }
+
+  function showChannel(name){
+    ['mic','cam','text'].forEach(function(k){
+      document.getElementById('pane-'+k).hidden = (k !== name);
+    });
+    document.querySelectorAll('.channel-tab').forEach(function(btn, idx){
+      var map = ['mic','cam','text'];
+      btn.classList.toggle('active', map[idx] === name);
+    });
+  }
+
+  document.querySelectorAll('.activity-choice').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.activity-choice').forEach(function(x){ x.classList.remove('active'); });
+      el.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.chip').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('active'); });
+      el.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

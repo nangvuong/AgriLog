@@ -1,5 +1,5 @@
 """
-Điểm khởi động của bot: load model STT (1 lần), khởi tạo bot Telegram,
+Điểm khởi động của bot Telegram: load model STT (1 lần), khởi tạo bot Telegram,
 đăng ký handler, chạy polling.
 """
 
@@ -8,7 +8,7 @@ import logging
 from telegram.ext import Application, MessageHandler, filters
 
 import config
-from handlers.voice_handler import handle_audio_message
+from handlers.voice_handler import handle_audio_message, handle_text_message
 from services.llm_engine import llm_engine
 from services.stt_engine import stt_engine
 
@@ -35,7 +35,7 @@ async def on_startup(app: Application):
     else:
         logger.info("LLM post-processing đã tắt (LLM_ENABLED=false).")
 
-    logger.info("Bot đã sẵn sàng nhận file audio.")
+    logger.info("Bot đã sẵn sàng nhận file audio và tin nhắn văn bản.")
 
 
 async def on_shutdown(app: Application):
@@ -57,6 +57,13 @@ def main():
         MessageHandler(
             filters.VOICE | filters.AUDIO | filters.Document.ALL,
             handle_audio_message,
+        )
+    )
+    # Nhận tin nhắn văn bản trực tiếp từ người dùng
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle_text_message,
         )
     )
 

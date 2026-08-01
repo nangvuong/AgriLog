@@ -124,24 +124,28 @@ Hệ thống trả về mảng các hoạt động canh tác (`activities`), h�
 ```json
 [
   {
-    "Hoạt động/Activity": "LÀM CỎ",
-    "Cây trồng/Crop": "RAU",
-    "Thửa ruộng/Field": "VƯỜN RAU",
-    "Vật tư/Material": null,
-    "Số lượng/Quantity": null,
-    "Đơn vị/Unit": null,
-    "Ngày/Date": "27/07/2026",
-    "Ghi chú/Note": ""
+    "loai_hoat_dong": "phun_thuoc",
+    "ngay_thuc_hien": "29/07/2026",
+    "mo_ta": "Phun thuốc Regent 50ml cho lô A2 bưởi da xanh",
+    "thoi_tiet": "nắng",
+    "ma_lo": "A2",
+    "giong_buoi": "da xanh",
+    "ten_vat_tu": "Regent",
+    "loai_vat_tu": "thuoc_bvtv",
+    "lieu_luong": 50,
+    "don_vi": "ml"
   },
   {
-    "Hoạt động/Activity": "BÓN PHÂN",
-    "Cây trồng/Crop": "RAU",
-    "Thửa ruộng/Field": "VƯỜN RAU",
-    "Vật tư/Material": "PHÂN HỮU CƠ",
-    "Số lượng/Quantity": 3,
-    "Đơn vị/Unit": "KG",
-    "Ngày/Date": "27/07/2026",
-    "Ghi chú/Note": ""
+    "loai_hoat_dong": "bon_phan",
+    "ngay_thuc_hien": "29/07/2026",
+    "mo_ta": "Bón 3 kg phân hữu cơ cho lô B1",
+    "thoi_tiet": null,
+    "ma_lo": "B1",
+    "giong_buoi": null,
+    "ten_vat_tu": "phân hữu cơ",
+    "loai_vat_tu": "phan_bon",
+    "lieu_luong": 3,
+    "don_vi": "kg"
   }
 ]
 ```

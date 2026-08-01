@@ -4,13 +4,28 @@
 
 @layer base {
   :root {
+    --green-deep: #1F3A2E;
+    --green-mid: #345645;
+    --green-soft: #8FAE94;
+    --gold: #D9A441;
+    --gold-dark: #B9862F;
+    --gold-soft: #F7EDD6;
+    --red: #B84C3C;
+    --red-soft: #F5E3DE;
+    --paper: #FBF8F1;
+    --paper-shell: #EFE9D8;
+    --paper-line: #E4DCC8;
+    --soil: #4A3826;
+    --ink: #23301F;
+    --ink-soft: #5C6B57;
+    --white: #F5F2E8;
+
     color-scheme: light;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-      Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
     line-height: 1.5;
     font-weight: 400;
-    color: #0f172a;
-    background-color: #f8fafc;
+    color: #23301F;
+    background-color: #EFE9D8;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -27,10 +42,22 @@
 
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top left, rgba(22, 163, 74, 0.08), transparent 45%),
-      radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.08), transparent 45%),
-      linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    background-color: #EFE9D8;
+  }
+
+  font-serif,
+  .font-serif {
+    font-family: 'Fraunces', serif;
+  }
+
+  font-mono,
+  .font-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  font-sans,
+  .font-sans {
+    font-family: 'IBM Plex Sans', sans-serif;
   }
 }
 

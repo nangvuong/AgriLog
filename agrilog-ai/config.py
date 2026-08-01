@@ -60,13 +60,17 @@ FFMPEG_TIMEOUT_SEC = int(os.getenv("FFMPEG_TIMEOUT_SEC", "1800"))  # 30 phút
 # cấu hình máy; đặt timeout rộng để không bị huỷ giữa chừng.
 STT_TIMEOUT_SEC = int(os.getenv("STT_TIMEOUT_SEC", "3600"))  # 60 phút
 
-# ----- LLM (External API) -----
-# Đường dẫn API tương thích OpenAI (Ví dụ: http://127.0.0.1:8082)
-LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "http://127.0.0.1:8082")
-# Số token tối đa cho mỗi request LLM (tương ứng với độ dài input + output).
-LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
+# ----- LLM (External API - Google AI Gemini API) -----
+# Đường dẫn API Google AI Studio (mặc định: https://generativelanguage.googleapis.com)
+GEMINI_API_BASE_URL = os.getenv("GEMINI_API_BASE_URL", "https://generativelanguage.googleapis.com")
+# API Key của Google AI Studio (lấy tại https://aistudio.google.com/)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", os.getenv("LLM_API_KEY", "")))
+# Tên mô hình Gemini (ví dụ: gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash)
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", os.getenv("LLM_MODEL", "gemini-1.5-flash"))
+# Số token tối đa cho mỗi request LLM (phần output JSON)
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1024"))
 # Timeout cho mỗi request LLM (giây)
-LLM_TIMEOUT_SEC = int(os.getenv("LLM_TIMEOUT_SEC", "120"))
+LLM_TIMEOUT_SEC = int(os.getenv("LLM_TIMEOUT_SEC", "60"))
 # Số lần thử lại tối đa khi gặp lỗi (timeout, lỗi server, JSON parse lỗi)
 LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
 # Bật/tắt LLM post-processing (đặt false nếu chỉ muốn STT thô)

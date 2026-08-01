@@ -1,26 +1,34 @@
 """
-LLM Engine - quản lý llama-server (llama.cpp) chạy nền như một subprocess,
+LLM Engine - Tích hợp Google AI Studio (Gemini API generateContent),
 cung cấp API async để xử lý output từ STT và trả về dạng JSON có cấu trúc.
 
 Kiến trúc:
-- Khi app khởi động, start() sẽ chạy llama-server subprocess phục vụ HTTP API
-    trên một port local (mặc định 8082 theo cấu hình hiện tại).
-- Các request LLM đi qua HTTP POST đến endpoint /v1/chat/completions (OpenAI-
-  compatible) của llama-server.
-- Khi app tắt, stop() sẽ gửi SIGTERM để dọn dẹp subprocess.
+- Khi app khởi động, start() sẽ kiểm tra kết nối tới Google AI API
+  tại GEMINI_API_BASE_URL (mặc định https://generativelanguage.googleapis.com).
+- Các request LLM đi qua HTTP POST đến endpoint /v1beta/models/{model}:generateContent
+  với responseMimeType="application/json".
+- Khi app tắt, stop() đóng ClientSession HTTP.
 
 Chuyển đổi số tiếng Việt → giá trị số được xử lý hoàn toàn bởi LLM thông qua
 system prompt.
+
+Schema trích xuất được thiết kế để khớp 1:1 với cấu trúc database PostgreSQL
+(bảng hoat_dong_canh_tac + chi_tiet_vat_tu_su_dung + lo_dat + vu_mua).
 """
 
 import asyncio
 import json
-
 import logging
 import signal
+import ssl
 import time
 
 import aiohttp
+try:
+    import certifi
+    _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    _SSL_CONTEXT = ssl.create_default_context()
 
 import config
 from services.normalizer import normalize_activity_list
@@ -35,7 +43,7 @@ class LLMError(Exception):
 class LLMEngine:
     def __init__(self):
         self._session: aiohttp.ClientSession | None = None
-        self._base_url = config.LLM_API_BASE_URL
+        self._base_url = config.GEMINI_API_BASE_URL
         self._ready = False
         self._queue: asyncio.Queue | None = None
         self._worker_task: asyncio.Task | None = None
@@ -47,7 +55,8 @@ class LLMEngine:
             logger.warning("LLM API session đã khởi tạo, bỏ qua start().")
             return
 
-        self._session = aiohttp.ClientSession()
+        connector = aiohttp.TCPConnector(ssl=_SSL_CONTEXT)
+        self._session = aiohttp.ClientSession(connector=connector)
         self._queue = asyncio.Queue()
         self._worker_task = asyncio.create_task(self._queue_worker())
 
@@ -56,23 +65,14 @@ class LLMEngine:
         logger.info("Kết nối tới LLM API thành công tại %s (queue worker started)", self._base_url)
 
     async def _wait_until_ready(self, timeout: int = 30):
-        """Poll health endpoint cho đến khi server API phản hồi hoặc timeout."""
-        health_url = f"{self._base_url}/health"
+        """Poll endpoint cho đến khi Google AI API phản hồi hoặc timeout."""
+        models_url = f"{self._base_url}/v1beta/models?key={config.GEMINI_API_KEY}"
         start_time = time.monotonic()
 
         while time.monotonic() - start_time < timeout:
             try:
-                async with self._session.get(health_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                    if resp.status == 200:
-                        self._ready = True
-                        return
-            except (aiohttp.ClientError, asyncio.TimeoutError):
-                pass
-            
-            # API OpenAI-compatible khác có thể không có /health, thử ping models
-            try:
-                async with self._session.get(f"{self._base_url}/v1/models", timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                    if resp.status == 200:
+                async with self._session.get(models_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    if resp.status in (200, 400, 401, 403):
                         self._ready = True
                         return
             except (aiohttp.ClientError, asyncio.TimeoutError):
@@ -80,8 +80,7 @@ class LLMEngine:
 
             await asyncio.sleep(2)
 
-        # Nếu không có phản hồi vẫn cho qua, báo warning (có thể API không có các endpoint trên)
-        logger.warning(f"Không thể ping LLM API tại {self._base_url} sau {timeout}s, bỏ qua health check.")
+        logger.warning("Không thể ping Google AI API tại %s sau %ds, bỏ qua health check.", self._base_url, timeout)
         self._ready = True
 
     async def stop(self):
@@ -100,8 +99,25 @@ class LLMEngine:
 
         self._ready = False
 
-    # Schema dùng wrapper object vì llama.cpp JSON mode
-    # chỉ hỗ trợ top-level object. Unwrap trong _do_post_process.
+    # ------------------------------------------------------------------
+    # JSON Schema trích xuất — Khớp 1:1 với CSDL PostgreSQL
+    # ------------------------------------------------------------------
+    # Bảng chính: hoat_dong_canh_tac (bảng 8 trong schema)
+    #   + ngay_thuc_hien    DATE NOT NULL
+    #   + loai_hoat_dong    loai_hoat_dong NOT NULL (enum)
+    #   + mo_ta             TEXT
+    #   + thoi_tiet         VARCHAR(100)
+    #
+    # Bảng tham chiếu: lo_dat (bảng 5)
+    #   + ma_lo             VARCHAR(50)
+    #   + giong_buoi        VARCHAR(100)
+    #
+    # Bảng con: chi_tiet_vat_tu_su_dung (bảng 9)
+    #   + ten_vat_tu        VARCHAR(255) — từ bảng vat_tu_dau_vao
+    #   + loai_vat_tu       loai_vat_tu (enum: phan_bon | thuoc_bvtv | che_pham_sinh_hoc)
+    #   + lieu_luong        NUMERIC(10,2) NOT NULL
+    #   + don_vi            VARCHAR(20) NOT NULL (ml, g, l, kg)
+    # ------------------------------------------------------------------
     _EXTRACT_SCHEMA = {
         "type": "json_schema",
         "json_schema": {
@@ -115,18 +131,39 @@ class LLMEngine:
                         "items": {
                             "type": "object",
                             "properties": {
-                                "Hoạt động/Activity": {"type": ["string", "null"]},
-                                "Cây trồng/Crop":     {"type": ["string", "null"]},
-                                "Thửa ruộng/Field":    {"type": ["string", "null"]},
-                                "Vật tư/Material": {"type": ["string", "null"]},
-                                "Số lượng/Quantity": {"type": ["number", "null"]},
-                                "Đơn vị/Unit":     {"type": ["string", "null"]},
-                                "Ngày/Date":       {"type": ["string", "null"]},
-                                "Ghi chú/Note":     {"type": "string"},
+                                # --- Bảng hoat_dong_canh_tac ---
+                                "loai_hoat_dong": {
+                                    "type": "string",
+                                    "enum": [
+                                        "bon_phan", "phun_thuoc", "tuoi_nuoc",
+                                        "tia_canh", "lam_co", "be_qua",
+                                        "kiem_tra_sau_benh", "khac"
+                                    ],
+                                },
+                                "ngay_thuc_hien": {"type": ["string", "null"]},
+                                "mo_ta":          {"type": ["string", "null"]},
+                                "thoi_tiet":      {"type": ["string", "null"]},
+
+                                # --- Bảng lo_dat (tham chiếu) ---
+                                "ma_lo":          {"type": ["string", "null"]},
+                                "giong_buoi":     {"type": ["string", "null"]},
+
+                                # --- Bảng chi_tiet_vat_tu_su_dung ---
+                                "ten_vat_tu":     {"type": ["string", "null"]},
+                                "loai_vat_tu": {
+                                    "type": ["string", "null"],
+                                    "enum": [
+                                        "phan_bon", "thuoc_bvtv",
+                                        "che_pham_sinh_hoc", None
+                                    ],
+                                },
+                                "lieu_luong":     {"type": ["number", "null"]},
+                                "don_vi":         {"type": ["string", "null"]},
                             },
                             "required": [
-                                "Hoạt động/Activity", "Cây trồng/Crop", "Thửa ruộng/Field",
-                                "Vật tư/Material", "Số lượng/Quantity", "Đơn vị/Unit", "Ngày/Date", "Ghi chú/Note"
+                                "loai_hoat_dong", "ngay_thuc_hien", "mo_ta",
+                                "thoi_tiet", "ma_lo", "giong_buoi",
+                                "ten_vat_tu", "loai_vat_tu", "lieu_luong", "don_vi",
                             ],
                             "additionalProperties": False,
                         }
@@ -143,46 +180,82 @@ class LLMEngine:
     # ------------------------------------------------------------------
     async def _call_llm(self, system_prompt: str, user_content: str, schema: dict) -> dict | None:
         """
-        Gửi request đến llama-server kèm JSON schema.
+        Gửi request đến Cerebras Cloud API (OpenAI-compatible) kèm JSON schema.
         Trả về dict JSON đã parse, hoặc None nếu lỗi.
         Tự động retry tối đa LLM_MAX_RETRIES lần khi gặp lỗi.
         """
+        base_url = self._base_url.rstrip("/")
+        url = f"{base_url}/v1beta/models/{config.GEMINI_MODEL}:generateContent?key={config.GEMINI_API_KEY}"
         payload = {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
+            "system_instruction": {
+                "parts": [{"text": system_prompt}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": user_content}]
+                }
             ],
-            "temperature": 0.1,
-            "max_tokens": config.LLM_MAX_TOKENS,
-            "stream": False,
-            "response_format": {"type": "json_object"},
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": config.LLM_MAX_TOKENS,
+                "responseMimeType": "application/json",
+            },
         }
-
-        url = f"{self._base_url}/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+        }
         max_retries = config.LLM_MAX_RETRIES
 
         for attempt in range(1, max_retries + 1):
             try:
                 timeout = aiohttp.ClientTimeout(total=config.LLM_TIMEOUT_SEC)
-                async with self._session.post(url, json=payload, timeout=timeout) as resp:
+                async with self._session.post(url, json=payload, headers=headers, timeout=timeout) as resp:
                     if resp.status != 200:
                         body = await resp.text()
-                        logger.error(
-                            "LLM server lỗi %d (lần %d/%d): %s",
-                            resp.status, attempt, max_retries, body[:300],
-                        )
+                        if resp.status in (400, 401, 403):
+                            logger.error(
+                                "Lỗi xác thực/client (%d) từ Google AI API (không retry): %s",
+                                resp.status, body[:300],
+                            )
+                            return None
+                        if resp.status == 429:
+                            logger.warning("Google AI API bị giới hạn tần suất (429), sẽ thử lại...")
+                        else:
+                            logger.error(
+                                "Google AI server lỗi %d (lần %d/%d): %s",
+                                resp.status, attempt, max_retries, body[:300],
+                            )
                         if attempt < max_retries:
                             await asyncio.sleep(attempt * 2)
                             continue
                         return None
 
                     data = await resp.json()
-                    result = data["choices"][0]["message"]["content"].strip()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        logger.warning("Google AI trả về rỗng không có candidate (lần %d/%d): %s", attempt, max_retries, data)
+                        if attempt < max_retries:
+                            await asyncio.sleep(attempt * 2)
+                            continue
+                        return None
+
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    result = parts[0].get("text", "").strip() if parts else ""
                     logger.info(f"Raw LLM output (lần {attempt}): {result}")
 
                     if "<think>" in result:
                         parts = result.split("</think>")
                         result = parts[-1].strip() if len(parts) > 1 else result.split("<think>")[0].strip()
+
+                    # Loại bỏ markdown fences nếu mô hình trả về block ```json ... ```
+                    if result.startswith("```"):
+                        lines = result.splitlines()
+                        if lines[0].startswith("```"):
+                            lines = lines[1:]
+                        if lines and lines[-1].startswith("```"):
+                            lines = lines[:-1]
+                        result = "\n".join(lines).strip()
 
                     if not result:
                         logger.warning("LLM trả về kết quả rỗng (lần %d/%d).", attempt, max_retries)
@@ -223,28 +296,70 @@ class LLMEngine:
 
 
     # ------------------------------------------------------------------
-    # Trích xuất STT text -> JSON (giữ nguyên string)
+    # Trích xuất STT text -> JSON (theo cấu trúc CSDL nhật ký bưởi)
     # ------------------------------------------------------------------
     async def _extract_json(self, raw_text: str) -> dict | None:
-        """Gọi LLM để bóc tách và phân loại các hoạt động canh tác thành JSON array (wrapper object)."""
+        """
+        Gọi LLM để bóc tách và phân loại các hoạt động canh tác bưởi từ
+        văn bản thành JSON array. Các trường trích xuất khớp 1:1 với bảng
+        hoat_dong_canh_tac, chi_tiet_vat_tu_su_dung và lo_dat.
+        """
         system_prompt = (
-            "Bạn là AI phân loại và trích xuất nhật ký hoạt động canh tác nông nghiệp từ văn bản.\n\n"
-            "Quy tắc:\n"
-            "- Một đoạn văn bản có thể chứa nhiều hoạt động khác nhau.\n"
-            "- Tách mỗi hoạt động thành một phần tử riêng trong mảng activities.\n"
-            "- Trích xuất thông tin vào đúng các trường: Hoạt động/Activity, Cây trồng/Crop, Thửa ruộng/Field, Vật tư/Material, Số lượng/Quantity, Đơn vị/Unit, Ngày/Date, Ghi chú/Note.\n"
-            "- \"Số lượng/Quantity\" là kiểu số (number), không để dạng chữ.\n"
-            "- Trích xuất nguyên văn thông tin ngày tháng trong văn bản (hôm nay, hôm qua, ngày mai...) vào trường \"Ngày/Date\".\n"
-            "- Nếu không có thông tin thì để null.\n"
-            "- \"Ghi chú/Note\" là thông tin bổ sung, không nằm trong các trường khác, nếu không có thì để chuỗi rỗng \"\".\n\n"
-            "Ví dụ đầu vào:\n"
-            "Hôm nay tôi làm cỏ và tưới nước cho vườn rau, sau đó bón thêm 3 kg phân hữu cơ.\n\n"
-            "Ví dụ đầu ra JSON:\n"
+            "Bạn là AI trích xuất nhật ký hoạt động canh tác bưởi xuất khẩu "
+            "từ giọng nói nông dân Việt Nam (có thể có từ ngữ địa phương).\n\n"
+
+            "## Quy tắc trích xuất\n"
+            "- Một đoạn văn bản có thể chứa nhiều hoạt động khác nhau, tách mỗi hoạt động thành một phần tử riêng.\n"
+            "- Trích xuất thông tin vào đúng các trường sau:\n\n"
+
+            "### Bảng hoat_dong_canh_tac (Nhật ký hàng ngày)\n"
+            '  - "loai_hoat_dong" (bắt buộc): Enum giá trị cố định, PHẢI là một trong:\n'
+            '      "bon_phan", "phun_thuoc", "tuoi_nuoc", "tia_canh", "lam_co", "be_qua", "kiem_tra_sau_benh", "khac"\n'
+            "    Quy ước ánh xạ:\n"
+            '      bón phân / rải phân / phân bón / NPK / DAP → "bon_phan"\n'
+            '      phun thuốc / xịt thuốc / thuốc sâu / thuốc trừ sâu / BVTV → "phun_thuoc"\n'
+            '      tưới nước / tưới / bơm nước → "tuoi_nuoc"\n'
+            '      tỉa cành / cắt cành / tạo tán / cắt nhánh → "tia_canh"\n'
+            '      làm cỏ / nhổ cỏ / phát cỏ / cắt cỏ / phun cỏ → "lam_co"\n'
+            '      bẻ quả / tỉa quả / tỉa trái / bẻ trái non → "be_qua"\n'
+            '      kiểm tra sâu bệnh / khảo sát dịch hại / sâu vẽ bùa / nhện đỏ / rầy / nấm → "kiem_tra_sau_benh"\n'
+            '      nếu không khớp mục nào ở trên → "khac"\n'
+            '  - "ngay_thuc_hien": Trích xuất nguyên văn thông tin ngày tháng (hôm nay, hôm qua, ngày 15, sáng nay...). Nếu không rõ để null.\n'
+            '  - "mo_ta": Mô tả chi tiết hành động (nguyên văn ngắn gọn, ví dụ: "Phun thuốc trừ sâu vẽ bùa cho lô A2").\n'
+            '  - "thoi_tiet": Thời tiết nếu nông dân đề cập (nắng, mưa, nắng gắt, mát...). Nếu không có để null.\n\n'
+
+            "### Bảng lo_dat (Lô đất / thửa trong vườn bưởi)\n"
+            '  - "ma_lo": Mã lô (ví dụ: "A2", "B1", "LO3", "lô 5"). Nếu không rõ để null.\n'
+            '  - "giong_buoi": Giống bưởi (Da Xanh, Năm Roi, Diễn, Đường lá cam...). Nếu không rõ để null.\n\n'
+
+            "### Bảng chi_tiet_vat_tu_su_dung (Vật tư đầu vào)\n"
+            '  - "ten_vat_tu": Tên đầy đủ vật tư / thuốc / phân bón (Regent 800WG, Bassa 50EC, DAP 16-48-0, phân hữu cơ...). Nếu không có để null.\n'
+            '  - "loai_vat_tu": Phân loại vật tư, PHẢI là một trong:\n'
+            '      "phan_bon" (phân bón, NPK, DAP, hữu cơ, vi sinh)\n'
+            '      "thuoc_bvtv" (thuốc bảo vệ thực vật, thuốc trừ sâu, trừ nấm, trừ cỏ)\n'
+            '      "che_pham_sinh_hoc" (chế phẩm sinh học, trichoderma, EM)\n'
+            '      null (nếu hoạt động không sử dụng vật tư)\n'
+            '  - "lieu_luong": Số lượng / liều lượng sử dụng (kiểu number). Chuyển số bằng chữ sang số. Nếu không có để null.\n'
+            '  - "don_vi": Đơn vị đo lường (ml, g, kg, lít, bao, gói, chai...). Nếu không có để null.\n\n'
+
+            "## Ví dụ\n"
+            "Đầu vào: Sáng nay tôi phun thuốc Regent năm mươi ml cho lô A2 bưởi da xanh, "
+            "rồi chiều đi bón thêm 3 kg phân hữu cơ cho lô B1 trời nắng.\n\n"
+            "Đầu ra JSON:\n"
             '{"activities": [\n'
-            '  {"Hoạt động/Activity": "làm cỏ", "Cây trồng/Crop": "rau", "Thửa ruộng/Field": "vườn rau", "Vật tư/Material": null, "Số lượng/Quantity": null, "Đơn vị/Unit": null, "Ngày/Date": "hôm nay", "Ghi chú/Note": ""},\n'
-            '  {"Hoạt động/Activity": "tưới nước", "Cây trồng/Crop": "rau", "Thửa ruộng/Field": "vườn rau", "Vật tư/Material": null, "Số lượng/Quantity": null, "Đơn vị/Unit": null, "Ngày/Date": "hôm nay", "Ghi chú/Note": ""},\n'
-            '  {"Hoạt động/Activity": "bón phân", "Cây trồng/Crop": "rau", "Thửa ruộng/Field": "vườn rau", "Vật tư/Material": "phân hữu cơ", "Số lượng/Quantity": 3, "Đơn vị/Unit": "kg", "Ngày/Date": "hôm nay", "Ghi chú/Note": ""}\n'
-            ']}'
+            '  {"loai_hoat_dong": "phun_thuoc", "ngay_thuc_hien": "sáng nay", '
+            '"mo_ta": "Phun thuốc Regent 50ml cho lô A2 bưởi da xanh", '
+            '"thoi_tiet": null, '
+            '"ma_lo": "A2", "giong_buoi": "da xanh", '
+            '"ten_vat_tu": "Regent", "loai_vat_tu": "thuoc_bvtv", '
+            '"lieu_luong": 50, "don_vi": "ml"},\n'
+            '  {"loai_hoat_dong": "bon_phan", "ngay_thuc_hien": "chiều nay", '
+            '"mo_ta": "Bón 3 kg phân hữu cơ cho lô B1", '
+            '"thoi_tiet": "nắng", '
+            '"ma_lo": "B1", "giong_buoi": null, '
+            '"ten_vat_tu": "phân hữu cơ", "loai_vat_tu": "phan_bon", '
+            '"lieu_luong": 3, "don_vi": "kg"}\n'
+            "]}"
         )
         return await self._call_llm(system_prompt, raw_text, self._EXTRACT_SCHEMA)
 
@@ -297,9 +412,9 @@ class LLMEngine:
     async def _do_post_process(self, raw_text: str) -> str:
         """
         Gọi LLM, unwrap wrapper {"activities": [...]}
-        và trả về JSON string của array các hoạt động.
+        và trả về JSON string của array các hoạt động (đã chuẩn hóa theo schema DB).
         """
-        logger.info("Bắt đầu trích xuất hoạt động canh tác...")
+        logger.info("Bắt đầu trích xuất hoạt động canh tác bưởi...")
         result = await self._extract_json(raw_text)
         if not result:
             logger.warning("Trích xuất thất bại, trả về text gốc.")
@@ -311,7 +426,7 @@ class LLMEngine:
             logger.warning("Không có activities hợp lệ trong kết quả LLM, trả về text gốc.")
             return raw_text
 
-        # Chuyển bước chuẩn hóa (uppercase, ngày tương đối, số lượng) sang module normalizer
+        # Chuyển bước chuẩn hóa (ngày tương đối, liều lượng, đơn vị) sang module normalizer
         activities = normalize_activity_list(activities)
 
         logger.info("Trích xuất và chuẩn hóa thành công %d hoạt động.", len(activities))

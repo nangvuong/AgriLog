@@ -1,12 +1,16 @@
 """
-Handler xử lý khi người dùng gửi file audio (.wav) vào bot Telegram.
+Handler xử lý khi người dùng gửi file audio (.wav, voice message) hoặc tin nhắn văn bản vào bot Telegram.
+Định dạng kết quả JSON trả về thành tóm tắt rõ ràng với biểu tượng nông nghiệp kèm code block JSON chuẩn CSDL.
 """
 
+import html
+import json
 import logging
 import os
 import uuid
 
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 import config
@@ -20,6 +24,105 @@ logger = logging.getLogger(__name__)
 # phút), transcript rất dễ vượt mức này -> phải gửi dưới dạng file thay vì
 # edit_text (nếu không sẽ lỗi khi gửi).
 TELEGRAM_TEXT_LIMIT = 4096
+
+ACTIVITY_NAMES = {
+    "bon_phan": "Bón phân",
+    "phun_thuoc": "Phun thuốc BVTV",
+    "tuoi_nuoc": "Tưới nước",
+    "tia_canh": "Tỉa cành / Tạo tán",
+    "lam_co": "Làm cỏ",
+    "be_qua": "Bẻ quả / Tỉa trái",
+    "kiem_tra_sau_benh": "Kiểm tra sâu bệnh",
+    "khac": "Hoạt động khác",
+}
+
+MATERIAL_TYPES = {
+    "phan_bon": "Phân bón",
+    "thuoc_bvtv": "Thuốc BVTV",
+    "che_pham_sinh_hoc": "Chế phẩm sinh học",
+}
+
+
+def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, str]:
+    """
+    Định dạng kết quả JSON trả về cho Telegram Bot:
+    - Trình bày tóm tắt tiếng Việt trực quan, minh bạch với biểu tượng nông nghiệp (🌱, 🗓️, 📝, 📍, 📦, 🌤️).
+    - Hiển thị khối JSON Dữ Liệu chuẩn CSDL (bảng hoat_dong_canh_tac, chi_tiet_vat_tu_su_dung, lo_dat)
+      trong thẻ HTML <pre><code class="language-json">...</code></pre>.
+    Trả về: (full_msg, summary_msg, parse_mode, file_content, filename)
+    """
+    try:
+        data = json.loads(raw_text)
+        activities = data.get("activities") if isinstance(data, dict) else (data if isinstance(data, list) else None)
+        if not isinstance(activities, list) or len(activities) == 0:
+            return raw_text, raw_text, None, raw_text, "ket_qua.txt"
+
+        lines = [
+            "<b>🌱 NHẬT KÝ CANH TÁC BƯỞI EXPORT (GLOBALGAP)</b>",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+        ]
+
+        for idx, item in enumerate(activities, 1):
+            if not isinstance(item, dict):
+                continue
+            loai_key = str(item.get("loai_hoat_dong") or "khac").lower()
+            loai_vn = ACTIVITY_NAMES.get(loai_key, "Hoạt động khác")
+            ngay = item.get("ngay_thuc_hien")
+            header = f"<b>{idx}. {html.escape(loai_vn)}</b>"
+            if ngay:
+                header += f" — 🗓️ <i>{html.escape(str(ngay))}</i>"
+            lines.append(header)
+
+            mo_ta = item.get("mo_ta")
+            if mo_ta:
+                lines.append(f"  • 📝 <b>Mô tả:</b> {html.escape(str(mo_ta))}")
+
+            ma_lo = item.get("ma_lo")
+            giong = item.get("giong_buoi")
+            if ma_lo or giong:
+                lo_str = f"Lô {ma_lo}" if ma_lo else ""
+                giong_str = f"Giống: {giong}" if giong else ""
+                comb = " | ".join(filter(None, [lo_str, giong_str]))
+                lines.append(f"  • 📍 <b>Lô/Giống:</b> {html.escape(comb)}")
+
+            vat_tu = item.get("ten_vat_tu")
+            if vat_tu:
+                lieu_luong = item.get("lieu_luong")
+                don_vi = item.get("don_vi")
+                ll_str = (
+                    f" ({lieu_luong} {don_vi})"
+                    if lieu_luong is not None and don_vi
+                    else (f" ({lieu_luong})" if lieu_luong is not None else "")
+                )
+                loai_vt = item.get("loai_vat_tu")
+                vt_type_str = f" [{MATERIAL_TYPES.get(loai_vt, str(loai_vt))}]" if loai_vt else ""
+                lines.append(
+                    f"  • 📦 <b>Vật tư:</b> {html.escape(str(vat_tu))}{html.escape(ll_str)}{html.escape(vt_type_str)}"
+                )
+
+            thoi_tiet = item.get("thoi_tiet")
+            if thoi_tiet:
+                lines.append(f"  • 🌤️ <b>Thời tiết:</b> {html.escape(str(thoi_tiet))}")
+
+            lines.append("")  # Dòng trống phân cách giữa các hoạt động
+
+        json_pretty = json.dumps(activities, ensure_ascii=False, indent=2)
+        summary_only = "\n".join(lines).strip()
+        if len(summary_only) > TELEGRAM_TEXT_LIMIT:
+            summary_only = (
+                "<b>🌱 NHẬT KÝ CANH TÁC BƯỞI EXPORT</b>\n"
+                "<i>(Danh sách hoạt động quá dài, vui lòng xem chi tiết trong file JSON đính kèm bên dưới)</i>"
+            )
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("<b>📦 JSON Dữ Liệu (Chuẩn CSDL):</b>")
+        lines.append(f'<pre><code class="language-json">{html.escape(json_pretty)}</code></pre>')
+
+        full_msg = "\n".join(lines).strip()
+        return full_msg, summary_only, ParseMode.HTML, json_pretty, "nhat_ky_buoi.json"
+    except Exception as e:
+        logger.warning("Không định dạng được JSON sang HTML (%s), trả về text thô.", e)
+        return raw_text, raw_text, None, raw_text, "ket_qua.txt"
 
 
 async def handle_audio_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,26 +192,27 @@ async def handle_audio_message(update: Update, context: ContextTypes.DEFAULT_TYP
             await processing_msg.edit_text("🤖 Đang chỉnh sửa văn bản...")
             text = await llm_engine.post_process_stt(text)
 
-        # 5. Trả kết quả
+        # 5. Trả kết quả đã định dạng (HTML bảng biểu + JSON Code block)
         if not text:
             await processing_msg.edit_text("Không nhận diện được nội dung trong file audio.")
-        elif len(text) <= TELEGRAM_TEXT_LIMIT:
-            await processing_msg.edit_text(text)
         else:
-            # Kết quả quá dài để gửi trong 1 tin nhắn (thường gặp với audio
-            # dài, vd. 30 phút) -> gửi dưới dạng file .txt đính kèm.
-            txt_path = os.path.join(config.TMP_DIR, f"{job_id}_result.txt")
-            try:
-                with open(txt_path, "w", encoding="utf-8") as f:
-                    f.write(text)
-                await processing_msg.edit_text(
-                    f"Kết quả dài ({len(text)} ký tự), gửi dưới dạng file văn bản bên dưới."
-                )
-                with open(txt_path, "rb") as f:
-                    await message.reply_document(f, filename="ket_qua.txt")
-            finally:
-                if os.path.exists(txt_path):
-                    os.remove(txt_path)
+            full_msg, summary_msg, parse_mode, file_content, filename = format_telegram_message(text)
+            if len(full_msg) <= TELEGRAM_TEXT_LIMIT:
+                await processing_msg.edit_text(full_msg, parse_mode=parse_mode)
+            else:
+                out_path = os.path.join(config.TMP_DIR, f"{job_id}_{filename}")
+                try:
+                    with open(out_path, "w", encoding="utf-8") as f:
+                        f.write(file_content)
+                    await processing_msg.edit_text(
+                        summary_msg,
+                        parse_mode=parse_mode,
+                    )
+                    with open(out_path, "rb") as f:
+                        await message.reply_document(f, filename=filename)
+                finally:
+                    if os.path.exists(out_path):
+                        os.remove(out_path)
 
     except Exception:  # noqa: BLE001
         logger.exception("Lỗi không xác định khi xử lý audio.")
@@ -122,3 +226,45 @@ async def handle_audio_message(update: Update, context: ContextTypes.DEFAULT_TYP
                     os.remove(path)
             except OSError:
                 logger.warning("Không xoá được file tạm: %s", path)
+
+
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Nhận tin nhắn văn bản trực tiếp từ người dùng, chạy qua LLM bóc tách nhật ký và trả về JSON đã định dạng.
+    """
+    message = update.effective_message
+    if not message or not message.text:
+        return
+
+    text_input = message.text.strip()
+    if not text_input:
+        return
+
+    job_id = uuid.uuid4().hex
+    processing_msg = await message.reply_text("🤖 Đang phân tích nhật ký canh tác...")
+
+    try:
+        text = text_input
+        if config.LLM_ENABLED:
+            text = await llm_engine.post_process_stt(text_input)
+
+        full_msg, summary_msg, parse_mode, file_content, filename = format_telegram_message(text)
+        if len(full_msg) <= TELEGRAM_TEXT_LIMIT:
+            await processing_msg.edit_text(full_msg, parse_mode=parse_mode)
+        else:
+            out_path = os.path.join(config.TMP_DIR, f"{job_id}_{filename}")
+            try:
+                with open(out_path, "w", encoding="utf-8") as f:
+                    f.write(file_content)
+                await processing_msg.edit_text(
+                    summary_msg,
+                    parse_mode=parse_mode,
+                )
+                with open(out_path, "rb") as f:
+                    await message.reply_document(f, filename=filename)
+            finally:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+    except Exception:  # noqa: BLE001
+        logger.exception("Lỗi khi xử lý tin nhắn văn bản.")
+        await processing_msg.edit_text("Đã có lỗi xảy ra khi phân tích nhật ký, vui lòng thử lại.")
