@@ -60,9 +60,10 @@ export class ActivitiesController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
   @ApiOperation({
-    summary: 'Ghi nhật ký hoạt động canh tác mới (hỗ trợ kèm vật tư & máy móc)',
+    summary:
+      'Ghi nhật ký hoạt động canh tác mới (hỗ trợ kèm vật tư, máy móc, quan sát sâu bệnh & thu hoạch)',
     description:
-      'Ghi nhận một hoạt động canh tác trên vụ mùa (ví dụ: bón phân, tưới nước, phun thuốc...) với thời gian, tọa độ, nguồn ghi nhận (MANUAL, VOICE, TEXT, IMAGE), đồng thời cho phép gán danh sách vật tư sử dụng (materials) và máy móc/thiết bị sử dụng (assets) ngay trong một yêu cầu.',
+      'Ghi nhận một hoạt động canh tác trên vụ mùa (ví dụ: bón phân, tưới nước, phun thuốc, kiểm tra sâu bệnh, thu hoạch...) với thời gian, tọa độ, nguồn ghi nhận (MANUAL, VOICE, TEXT, IMAGE), đồng thời cho phép gán danh sách vật tư sử dụng (materials), máy móc/thiết bị sử dụng (assets), quan sát/sâu bệnh (observations), và sản lượng thu hoạch (harvests) ngay trong cùng một yêu cầu.',
   })
   @ApiResponse({
     status: 201,

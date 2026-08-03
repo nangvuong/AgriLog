@@ -117,37 +117,63 @@ Toàn bộ JSON thô từ LLM được chuyển cho bộ xử lý hậu kỳ lu�
 
 ---
 
-## Cấu Trúc Dữ Liệu Đầu Ra (JSON Schema)
+## REST API & Cấu Trúc Dữ Liệu Đầu Ra (JSON Schema)
 
-Hệ thống trả về mảng các hoạt động canh tác (`activities`), hỗ trợ bóc tách nhiều hoạt động liên tiếp trong cùng một văn bản hoặc lời nói:
+> [!IMPORTANT]
+> Xem tài liệu đặc tả đầy đủ về API, schema `STTResponse`, các trường metadata AI và ánh xạ CSDL tại **[API_DOCS.md](file:///Users/nangvuong/Desktop/AgriLog/agrilog-ai/API_DOCS.md)**.
+
+### 1. Danh sách Endpoints REST API (`api.py` - FastAPI)
+* **`POST /api/v1/stt/transcribe`**: Nhận tệp âm thanh qua `multipart/form-data`, chuyển đổi giọng nói thành văn bản (STT) và bóc tách nhật ký canh tác bằng LLM.
+* **`POST /api/v1/stt/process-text`**: Nhận chuỗi văn bản gõ trực tiếp (`{"text": "..."}`) và bóc tách nhật ký canh tác.
+* **`GET /health`**: Kiểm tra trạng thái máy chủ, STT model và LLM engine.
+
+### 2. Cấu Trúc Chuẩn Hóa Phản Hồi (`STTResponse`)
+Mọi phản hồi từ REST API tuân theo cấu trúc JSON chuẩn có kèm metadata giám sát (`model`, `input`, `output`, `processing_time_ms`):
 
 ```json
-[
-  {
-    "loai_hoat_dong": "phun_thuoc",
-    "ngay_thuc_hien": "29/07/2026",
-    "mo_ta": "Phun thuốc Regent 50ml cho lô A2 bưởi da xanh",
-    "thoi_tiet": "nắng",
-    "ma_lo": "A2",
-    "giong_buoi": "da xanh",
-    "ten_vat_tu": "Regent",
-    "loai_vat_tu": "thuoc_bvtv",
-    "lieu_luong": 50,
-    "don_vi": "ml"
-  },
-  {
-    "loai_hoat_dong": "bon_phan",
-    "ngay_thuc_hien": "29/07/2026",
-    "mo_ta": "Bón 3 kg phân hữu cơ cho lô B1",
-    "thoi_tiet": null,
-    "ma_lo": "B1",
-    "giong_buoi": null,
-    "ten_vat_tu": "phân hữu cơ",
-    "loai_vat_tu": "phan_bon",
-    "lieu_luong": 3,
-    "don_vi": "kg"
-  }
-]
+{
+  "status": "success",
+  "raw_text": "Sáng nay phun 50ml thuốc Regent và bón 2 bao phân NPK cho lô A1 bưởi da xanh. Có sâu vẽ bùa nhẹ.",
+  "input": "Sáng nay phun 50ml thuốc Regent và bón 2 bao phân NPK cho lô A1 bưởi da xanh. Có sâu vẽ bùa nhẹ.",
+  "output": [
+    {
+      "loai_hoat_dong": "phun_thuoc",
+      "ngay_thuc_hien": "03/08/2026",
+      "mo_ta": "Phun 50ml thuốc Regent cho lô A1 bưởi da xanh",
+      "ma_lo": "A1",
+      "cay_trong": "bưởi",
+      "giong_buoi": "da xanh",
+      "materials": [
+        {
+          "ten_vat_tu": "Regent",
+          "loai_vat_tu": "thuoc_bvtv",
+          "lieu_luong": 50,
+          "don_vi": "ML"
+        },
+        {
+          "ten_vat_tu": "NPK",
+          "loai_vat_tu": "phan_bon",
+          "lieu_luong": 2,
+          "don_vi": "BAO"
+        }
+      ],
+      "assets": [],
+      "observations": [
+        {
+          "ten_sau_benh": "sâu vẽ bùa",
+          "muc_do": "nhẹ",
+          "trieu_chung": null,
+          "hinh_anh": null
+        }
+      ],
+      "harvests": []
+    }
+  ],
+  "model": "gemini-2.5-pro",
+  "model_name": "gemini-2.5-pro",
+  "processing_time": 1.245,
+  "processing_time_ms": 1245
+}
 ```
 
 ---
@@ -155,18 +181,20 @@ Hệ thống trả về mảng các hoạt động canh tác (`activities`), h�
 ## Cấu Trúc Thư Mục (Project Structure)
 
 ```text
-telegram-stt-bot/
+agrilog-ai/
+├── API_DOCS.md             # Tài liệu đặc tả kỹ thuật REST API, Schema & DB Metadata Mapping
+├── api.py                  # Máy chủ REST API (FastAPI) cho WebApp & Mobile App
 ├── main.py                 # Điểm khởi chạy chính của Telegram Bot
-├── config.py               # Cấu hình hệ thống (Token, Paths, URL Llama-server, Retry logic)
+├── config.py               # Cấu hình hệ thống (Token, Paths, URL Llama/Gemini, Retry logic)
 ├── requirements.txt        # Các thư viện Python cần thiết
 ├── telegram-stt-bot.service# File cấu hình chạy systemd service trên Linux
 ├── models/                 # Thư mục chứa các tệp Model AI (STT Sherpa-ONNX, VAD Silero)
 ├── handlers/               # Bộ xử lý sự kiện Telegram
-│   └── voice_handler.py    # Tiếp nhận, xử lý audio/text và phản hồi kết quả JSON cho user
+│   └── voice_handler.py    # Tiếp nhận, xử lý audio/text và phản hồi kết quả cho Telegram User
 └── services/               # Các module xử lý lõi (Core Processing Services)
     ├── audio_converter.py  # Xử lý chuyển đổi, định dạng lại tần số âm thanh bằng FFmpeg
     ├── stt_engine.py       # Engine nhận dạng giọng nói Sherpa-ONNX & VAD Silero (Queue Worker)
-    ├── llm_engine.py       # Engine Llama.cpp bóc tách JSON (Queue Worker & Retry Logic)
+    ├── llm_engine.py       # Engine Llama.cpp / Gemini bóc tách JSON kèm metadata
     └── normalizer/         # Bộ chuẩn hóa dữ liệu chuyên sâu (hậu xử lý sau LLM)
         ├── __init__.py     # Cổng export các module chuẩn hóa
         ├── activity_normalizer.py  # Chuẩn hóa UPPERCASE, Ngày tương đối, Đơn vị, Số lượng

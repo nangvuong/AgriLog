@@ -22,7 +22,7 @@ export class CreateObservationDto implements ICreateObservationDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  activity_id!: number;
+  activity_id?: number;
 
   @ApiProperty({
     example: 'Lá xuất hiện đốm vàng và héo ngọn',

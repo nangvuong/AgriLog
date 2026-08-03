@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 import json
 import logging
 import os
+import time
 import uuid
 from typing import Any, Optional
 
@@ -21,7 +22,7 @@ import uvicorn
 import config
 from services.audio_converter import AudioConversionError, resample_to_16k_mono_pcm16
 from services.llm_engine import llm_engine
-from services.normalizer import normalize_for_webapp
+from services.normalizer import normalize_activity_list
 from services.stt_engine import STTError, stt_engine
 
 # Cấu hình logging
@@ -102,6 +103,24 @@ class STTResponse(BaseModel):
     llm_output_text: Optional[str] = Field(
         None, description="Chuỗi JSON thô từ LLM"
     )
+    input: Optional[str] = Field(
+        None, description="Văn bản đầu vào cho LLM/STT"
+    )
+    output: Optional[Any] = Field(
+        None, description="Dữ liệu JSON đầu ra sau khi trích xuất và chuẩn hóa"
+    )
+    model: Optional[str] = Field(
+        None, description="Tên model AI đã sử dụng (STT/LLM)"
+    )
+    model_name: Optional[str] = Field(
+        None, description="Tên model AI đã sử dụng (alias của model)"
+    )
+    processing_time: Optional[float] = Field(
+        None, description="Thời gian xử lý tổng cộng (giây)"
+    )
+    processing_time_ms: Optional[int] = Field(
+        None, description="Thời gian xử lý tổng cộng (mili-giây)"
+    )
 
 
 @app.get("/", tags=["Health"])
@@ -181,31 +200,33 @@ async def transcribe_audio_api(
                 llm_output_text=None,
             )
 
+        start_time = time.monotonic()
+
         # 4. Chạy mô hình LLM bóc tách câu chữ thành JSON
         parsed_data = None
         llm_output_text = None
 
         if process_llm and config.LLM_ENABLED:
             try:
-                llm_output_text = await llm_engine.post_process_stt(raw_text)
-                try:
-                    flat_activities = json.loads(llm_output_text)
-                    # Chuyển flat LLM output → grouped hoat_dong_list cho webapp/DB
-                    if isinstance(flat_activities, list):
-                        parsed_data = normalize_for_webapp(flat_activities)
-                    else:
-                        parsed_data = flat_activities
-                except json.JSONDecodeError:
-                    parsed_data = llm_output_text
+                llm_res = await llm_engine.post_process_stt_with_metadata(raw_text)
+                parsed_data = llm_res["output"]
+                llm_output_text = json.dumps(llm_res["output"], ensure_ascii=False, indent=2)
             except Exception as exc:
                 logger.warning(f"Lỗi LLM post-processing: {exc}")
                 llm_output_text = str(exc)
 
+        elapsed_time = time.monotonic() - start_time
         return STTResponse(
             status="success",
             raw_text=raw_text,
             parsed_data=parsed_data,
             llm_output_text=llm_output_text,
+            input=raw_text,
+            output=parsed_data,
+            model=config.GEMINI_MODEL if (process_llm and config.LLM_ENABLED) else "sherpa-onnx",
+            model_name=config.GEMINI_MODEL if (process_llm and config.LLM_ENABLED) else "sherpa-onnx",
+            processing_time=round(elapsed_time, 3),
+            processing_time_ms=int(elapsed_time * 1000),
         )
 
     finally:
@@ -236,30 +257,31 @@ async def process_text_api(payload: ProcessTextRequest):
             detail="Văn bản không được để trống.",
         )
 
+    start_time = time.monotonic()
     parsed_data = None
     llm_output_text = None
 
     if config.LLM_ENABLED:
         try:
-            llm_output_text = await llm_engine.post_process_stt(raw_text)
-            try:
-                flat_activities = json.loads(llm_output_text)
-                # Chuyển flat LLM output → grouped hoat_dong_list cho webapp/DB
-                if isinstance(flat_activities, list):
-                    parsed_data = normalize_for_webapp(flat_activities)
-                else:
-                    parsed_data = flat_activities
-            except json.JSONDecodeError:
-                parsed_data = llm_output_text
+            llm_res = await llm_engine.post_process_stt_with_metadata(raw_text)
+            parsed_data = llm_res["output"]
+            llm_output_text = json.dumps(llm_res["output"], ensure_ascii=False, indent=2)
         except Exception as exc:
             logger.warning(f"Lỗi LLM processing: {exc}")
             llm_output_text = str(exc)
 
+    elapsed_time = time.monotonic() - start_time
     return STTResponse(
         status="success",
         raw_text=raw_text,
         parsed_data=parsed_data,
         llm_output_text=llm_output_text,
+        input=raw_text,
+        output=parsed_data,
+        model=config.GEMINI_MODEL if config.LLM_ENABLED else None,
+        model_name=config.GEMINI_MODEL if config.LLM_ENABLED else None,
+        processing_time=round(elapsed_time, 3),
+        processing_time_ms=int(elapsed_time * 1000),
     )
 
 

@@ -1,5 +1,7 @@
 import { SourceType, AiStatus } from '../enums/activity.enum';
 import { IPaginationQuery } from './pagination.dto';
+import { IObservationDto, ICreateObservationDto } from './observation.dto';
+import { IHarvestDto, ICreateHarvestDto } from './harvest.dto';
 
 export interface IActivityTypeDto {
   id: number;
@@ -50,6 +52,31 @@ export interface ICreateActivityAssetDto {
   usage_duration?: number;
 }
 
+export interface ICreateActivityAiExtractionDto {
+  model_name: string;
+  model?: string;
+  prompt_version?: string;
+  input_text?: string;
+  input?: string;
+  output_json?: any;
+  output?: any;
+  confidence?: number;
+  processing_time_ms?: number;
+  processing_time?: number;
+}
+
+export interface IActivityAiExtractionDto {
+  id: number;
+  activity_id: number;
+  model_name: string;
+  prompt_version?: string;
+  input_text?: string;
+  output_json?: any;
+  confidence?: number;
+  processing_time_ms?: number;
+  created_at: string | Date;
+}
+
 export interface IActivityDto {
   id: number;
   season_id: number;
@@ -71,6 +98,9 @@ export interface IActivityDto {
   activity_type_name?: string;
   materials?: IActivityMaterialDto[];
   assets?: IActivityAssetDto[];
+  observations?: IObservationDto[];
+  harvests?: IHarvestDto[];
+  ai_extraction?: IActivityAiExtractionDto;
 }
 
 export interface ICreateActivityDto {
@@ -87,6 +117,9 @@ export interface ICreateActivityDto {
   ai_status?: AiStatus;
   materials?: ICreateActivityMaterialDto[];
   assets?: ICreateActivityAssetDto[];
+  observations?: ICreateObservationDto[];
+  harvests?: ICreateHarvestDto[];
+  ai_extraction?: ICreateActivityAiExtractionDto;
 }
 
 export interface IUpdateActivityDto {
@@ -103,6 +136,8 @@ export interface IUpdateActivityDto {
   ai_status?: AiStatus;
   materials?: ICreateActivityMaterialDto[];
   assets?: ICreateActivityAssetDto[];
+  observations?: ICreateObservationDto[];
+  harvests?: ICreateHarvestDto[];
 }
 
 export interface IActivityQueryDto extends IPaginationQuery {

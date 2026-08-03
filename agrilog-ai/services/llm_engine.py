@@ -100,23 +100,14 @@ class LLMEngine:
         self._ready = False
 
     # ------------------------------------------------------------------
-    # JSON Schema trích xuất — Khớp 1:1 với CSDL PostgreSQL
+    # JSON Schema trích xuất — Khớp 1:1 với CSDL PostgreSQL agrilog_schema.sql
     # ------------------------------------------------------------------
-    # Bảng chính: hoat_dong_canh_tac (bảng 8 trong schema)
-    #   + ngay_thuc_hien    DATE NOT NULL
-    #   + loai_hoat_dong    loai_hoat_dong NOT NULL (enum)
-    #   + mo_ta             TEXT
-    #   + thoi_tiet         VARCHAR(100)
-    #
-    # Bảng tham chiếu: lo_dat (bảng 5)
-    #   + ma_lo             VARCHAR(50)
-    #   + giong_buoi        VARCHAR(100)
-    #
-    # Bảng con: chi_tiet_vat_tu_su_dung (bảng 9)
-    #   + ten_vat_tu        VARCHAR(255) — từ bảng vat_tu_dau_vao
-    #   + loai_vat_tu       loai_vat_tu (enum: phan_bon | thuoc_bvtv | che_pham_sinh_hoc)
-    #   + lieu_luong        NUMERIC(10,2) NOT NULL
-    #   + don_vi            VARCHAR(20) NOT NULL (ml, g, l, kg)
+    # Bảng activity & activity_type (bảng 8, 9): loai_hoat_dong, ngay_thuc_hien, mo_ta, thoi_tiet
+    # Bảng plot & crop (bảng 5, 6): ma_lo, cay_trong, giong_buoi
+    # Bảng material & activity_material (bảng 13, 14): Array materials[]
+    # Bảng asset & activity_asset (bảng 16, 17): Array assets[]
+    # Bảng observation (bảng 18): Array observations[]
+    # Bảng harvest (bảng 19): Array harvests[]
     # ------------------------------------------------------------------
     _EXTRACT_SCHEMA = {
         "type": "json_schema",
@@ -131,39 +122,96 @@ class LLMEngine:
                         "items": {
                             "type": "object",
                             "properties": {
-                                # --- Bảng hoat_dong_canh_tac ---
+                                # --- Bảng activity & activity_type ---
                                 "loai_hoat_dong": {
                                     "type": "string",
                                     "enum": [
                                         "bon_phan", "phun_thuoc", "tuoi_nuoc",
-                                        "tia_canh", "lam_co", "be_qua",
-                                        "kiem_tra_sau_benh", "khac"
+                                        "cat_tia", "tia_canh", "lam_co", "be_qua",
+                                        "sau_benh", "kiem_tra_sau_benh", "thu_hoach", "khac"
                                     ],
                                 },
                                 "ngay_thuc_hien": {"type": ["string", "null"]},
                                 "mo_ta":          {"type": ["string", "null"]},
                                 "thoi_tiet":      {"type": ["string", "null"]},
 
-                                # --- Bảng lo_dat (tham chiếu) ---
-                                "ma_lo":          {"type": ["string", "null"]},
-                                "giong_buoi":     {"type": ["string", "null"]},
+                                # --- Bảng plot & crop ---
+                                "ma_lo":      {"type": ["string", "null"]},
+                                "cay_trong":  {"type": ["string", "null"]},
+                                "giong_buoi": {"type": ["string", "null"]},
 
-                                # --- Bảng chi_tiet_vat_tu_su_dung ---
-                                "ten_vat_tu":     {"type": ["string", "null"]},
-                                "loai_vat_tu": {
-                                    "type": ["string", "null"],
-                                    "enum": [
-                                        "phan_bon", "thuoc_bvtv",
-                                        "che_pham_sinh_hoc", None
-                                    ],
+                                # --- Bảng material & activity_material (array, >= 0 items) ---
+                                "materials": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "ten_vat_tu": {"type": "string"},
+                                            "loai_vat_tu": {
+                                                "type": ["string", "null"],
+                                                "enum": ["phan_bon", "thuoc_bvtv", "che_pham_sinh_hoc", "khac", None],
+                                            },
+                                            "lieu_luong": {"type": ["number", "null"]},
+                                            "don_vi":     {"type": ["string", "null"]},
+                                        },
+                                        "required": ["ten_vat_tu", "loai_vat_tu", "lieu_luong", "don_vi"],
+                                        "additionalProperties": False,
+                                    },
                                 },
-                                "lieu_luong":     {"type": ["number", "null"]},
-                                "don_vi":         {"type": ["string", "null"]},
+
+                                # --- Bảng asset & activity_asset (array, >= 0 items) ---
+                                "assets": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "ten_cong_cu":       {"type": "string"},
+                                            "thoi_gian_su_dung": {"type": ["number", "null"]},
+                                        },
+                                        "required": ["ten_cong_cu", "thoi_gian_su_dung"],
+                                        "additionalProperties": False,
+                                    },
+                                },
+
+                                # --- Bảng observation (array, >= 0 items) ---
+                                "observations": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "trieu_chung": {"type": "string"},
+                                            "muc_do": {
+                                                "type": ["string", "null"],
+                                                "enum": ["LOW", "MEDIUM", "HIGH", None],
+                                            },
+                                            "mo_ta_sau_benh": {"type": ["string", "null"]},
+                                        },
+                                        "required": ["trieu_chung", "muc_do", "mo_ta_sau_benh"],
+                                        "additionalProperties": False,
+                                    },
+                                },
+
+                                # --- Bảng harvest (array, >= 0 items) ---
+                                "harvests": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "san_luong_thu_hoach": {"type": ["number", "null"]},
+                                            "don_vi_thu_hoach":    {"type": ["string", "null"]},
+                                            "pham_cap":            {"type": ["string", "null"]},
+                                            "thuong_lai":          {"type": ["string", "null"]},
+                                            "gia_ban":             {"type": ["number", "null"]},
+                                        },
+                                        "required": ["san_luong_thu_hoach", "don_vi_thu_hoach", "pham_cap", "thuong_lai", "gia_ban"],
+                                        "additionalProperties": False,
+                                    },
+                                },
                             },
                             "required": [
                                 "loai_hoat_dong", "ngay_thuc_hien", "mo_ta",
-                                "thoi_tiet", "ma_lo", "giong_buoi",
-                                "ten_vat_tu", "loai_vat_tu", "lieu_luong", "don_vi",
+                                "thoi_tiet", "ma_lo", "cay_trong", "giong_buoi",
+                                "materials", "assets", "observations", "harvests",
                             ],
                             "additionalProperties": False,
                         }
@@ -300,65 +348,106 @@ class LLMEngine:
     # ------------------------------------------------------------------
     async def _extract_json(self, raw_text: str) -> dict | None:
         """
-        Gọi LLM để bóc tách và phân loại các hoạt động canh tác bưởi từ
-        văn bản thành JSON array. Các trường trích xuất khớp 1:1 với bảng
-        hoat_dong_canh_tac, chi_tiet_vat_tu_su_dung và lo_dat.
+        Gọi LLM để bóc tách và phân loại các hoạt động canh tác nông nghiệp từ
+        văn bản thành JSON array. Các trường trích xuất khớp 1:1 với các bảng
+        trong cơ sở dữ liệu PostgreSQL agrilog_schema.sql.
         """
         system_prompt = (
-            "Bạn là AI trích xuất nhật ký hoạt động canh tác bưởi xuất khẩu "
-            "từ giọng nói nông dân Việt Nam (có thể có từ ngữ địa phương).\n\n"
+            "Bạn là AI chuyên gia trích xuất nhật ký hoạt động canh tác nông nghiệp "
+            "(cây ăn trái, bưởi, lúa, rau màu...) từ giọng nói nông dân Việt Nam.\n\n"
 
             "## Quy tắc trích xuất\n"
-            "- Một đoạn văn bản có thể chứa nhiều hoạt động khác nhau, tách mỗi hoạt động thành một phần tử riêng.\n"
-            "- Trích xuất thông tin vào đúng các trường sau:\n\n"
+            "- Một đoạn văn bản có thể chứa NHIỀU hoạt động khác nhau. Tách mỗi loại hoạt động thành một phần tử riêng trong mảng activities.\n"
+            "- Mỗi hoạt động chứa các MẢNG (arrays) con: materials, assets, observations, harvests.\n"
+            "- Nếu hoạt động không có vật tư/công cụ/quan sát/thu hoạch, đặt mảng tương ứng là rỗng [].\n"
+            "- Một hoạt động CÓ THỂ có nhiều vật tư, nhiều công cụ, nhiều loại sâu bệnh, nhiều đợt thu hoạch.\n\n"
 
-            "### Bảng hoat_dong_canh_tac (Nhật ký hàng ngày)\n"
-            '  - "loai_hoat_dong" (bắt buộc): Enum giá trị cố định, PHẢI là một trong:\n'
-            '      "bon_phan", "phun_thuoc", "tuoi_nuoc", "tia_canh", "lam_co", "be_qua", "kiem_tra_sau_benh", "khac"\n'
-            "    Quy ước ánh xạ:\n"
-            '      bón phân / rải phân / phân bón / NPK / DAP → "bon_phan"\n'
-            '      phun thuốc / xịt thuốc / thuốc sâu / thuốc trừ sâu / BVTV → "phun_thuoc"\n'
-            '      tưới nước / tưới / bơm nước → "tuoi_nuoc"\n'
-            '      tỉa cành / cắt cành / tạo tán / cắt nhánh → "tia_canh"\n'
-            '      làm cỏ / nhổ cỏ / phát cỏ / cắt cỏ / phun cỏ → "lam_co"\n'
-            '      bẻ quả / tỉa quả / tỉa trái / bẻ trái non → "be_qua"\n'
-            '      kiểm tra sâu bệnh / khảo sát dịch hại / sâu vẽ bùa / nhện đỏ / rầy / nấm → "kiem_tra_sau_benh"\n'
-            '      nếu không khớp mục nào ở trên → "khac"\n'
-            '  - "ngay_thuc_hien": Trích xuất nguyên văn thông tin ngày tháng (hôm nay, hôm qua, ngày 15, sáng nay...). Nếu không rõ để null.\n'
-            '  - "mo_ta": Mô tả chi tiết hành động (nguyên văn ngắn gọn, ví dụ: "Phun thuốc trừ sâu vẽ bùa cho lô A2").\n'
-            '  - "thoi_tiet": Thời tiết nếu nông dân đề cập (nắng, mưa, nắng gắt, mát...). Nếu không có để null.\n\n'
+            "### 1. Thông tin chung hoạt động (bảng activity & activity_type)\n"
+            '  - "loai_hoat_dong" (bắt buộc): Phải là một trong:\n'
+            '      "bon_phan"       — bón phân, NPK, DAP, phân hữu cơ, bón lót/thúc\n'
+            '      "phun_thuoc"     — phun/xịt thuốc, trừ sâu, trừ bệnh, trừ cỏ\n'
+            '      "tuoi_nuoc"      — tưới nước, tưới tiêu, bơm nước\n'
+            '      "cat_tia"        — cắt tỉa cành, tạo tán, bấm ngọn\n'
+            '      "lam_co"         — làm cỏ, cắt cỏ\n'
+            '      "be_qua"         — bẻ quả, tỉa trái non\n'
+            '      "sau_benh"       — thăm vườn, kiểm tra sâu bệnh, theo dõi cây\n'
+            '      "thu_hoach"      — thu hoạch, hái trái, gặt lúa, thu hái\n'
+            '      "khac"           — hoạt động khác\n'
+            '  - "ngay_thuc_hien": Ngày tháng nguyên văn ("hôm nay", "hôm qua", "ngày 15"...). Null nếu không rõ.\n'
+            '  - "mo_ta": Mô tả chi tiết hoạt động.\n'
+            '  - "thoi_tiet": Thời tiết ("nắng", "mưa"...). Null nếu không đề cập.\n'
+            '  - "ma_lo": Mã lô đất ("A2", "B1"...). Null nếu không có.\n'
+            '  - "cay_trong"/"giong_buoi": Tên cây trồng ("Bưởi Da Xanh", "Sầu Riêng", "Lúa ST25"...). Null nếu không rõ.\n\n'
 
-            "### Bảng lo_dat (Lô đất / thửa trong vườn bưởi)\n"
-            '  - "ma_lo": Mã lô (ví dụ: "A2", "B1", "LO3", "lô 5"). Nếu không rõ để null.\n'
-            '  - "giong_buoi": Giống bưởi (Da Xanh, Năm Roi, Diễn, Đường lá cam...). Nếu không rõ để null.\n\n'
+            "### 2. materials — Danh sách vật tư sử dụng (bảng material & activity_material)\n"
+            "  Mỗi loại vật tư là một object trong mảng materials:\n"
+            '  - "ten_vat_tu" (bắt buộc): Tên vật tư ("Regent 800WG", "NPK 20-20-15", "Trichoderma"...)\n'
+            '  - "loai_vat_tu": "phan_bon" | "thuoc_bvtv" | "che_pham_sinh_hoc" | "khac" | null\n'
+            '  - "lieu_luong": Số lượng dùng (kiểu number). Null nếu không có.\n'
+            '  - "don_vi": Đơn vị ("ml", "g", "kg", "lít", "bao", "gói"...). Null nếu không có.\n\n'
 
-            "### Bảng chi_tiet_vat_tu_su_dung (Vật tư đầu vào)\n"
-            '  - "ten_vat_tu": Tên đầy đủ vật tư / thuốc / phân bón (Regent 800WG, Bassa 50EC, DAP 16-48-0, phân hữu cơ...). Nếu không có để null.\n'
-            '  - "loai_vat_tu": Phân loại vật tư, PHẢI là một trong:\n'
-            '      "phan_bon" (phân bón, NPK, DAP, hữu cơ, vi sinh)\n'
-            '      "thuoc_bvtv" (thuốc bảo vệ thực vật, thuốc trừ sâu, trừ nấm, trừ cỏ)\n'
-            '      "che_pham_sinh_hoc" (chế phẩm sinh học, trichoderma, EM)\n'
-            '      null (nếu hoạt động không sử dụng vật tư)\n'
-            '  - "lieu_luong": Số lượng / liều lượng sử dụng (kiểu number). Chuyển số bằng chữ sang số. Nếu không có để null.\n'
-            '  - "don_vi": Đơn vị đo lường (ml, g, kg, lít, bao, gói, chai...). Nếu không có để null.\n\n'
+            "### 3. assets — Danh sách công cụ & máy móc sử dụng (bảng asset & activity_asset)\n"
+            "  Mỗi loại công cụ là một object trong mảng assets:\n"
+            '  - "ten_cong_cu" (bắt buộc): Tên công cụ ("máy phun đeo lưng", "máy bơm nước", "máy cắt cỏ"...)\n'
+            '  - "thoi_gian_su_dung": Thời gian dùng (phút, kiểu number). Null nếu không nói.\n\n'
+
+            "### 4. observations — Danh sách quan sát/sâu bệnh (bảng observation)\n"
+            "  Mỗi loại sâu bệnh/triệu chứng là một object trong mảng observations:\n"
+            '  - "trieu_chung" (bắt buộc): Tên sâu bệnh hoặc triệu chứng ("sâu vẽ bùa", "nhện đỏ", "vàng lá"...)\n'
+            '  - "muc_do": "LOW" (nhẹ) | "MEDIUM" (vừa) | "HIGH" (nặng) | null\n'
+            '  - "mo_ta_sau_benh": Mô tả chi tiết. Null nếu không có.\n\n'
+
+            "### 5. harvests — Danh sách sản lượng thu hoạch (bảng harvest)\n"
+            "  Mỗi đợt/loại thu hoạch là một object trong mảng harvests:\n"
+            '  - "san_luong_thu_hoach": Số lượng thu (kiểu number). Null nếu không có.\n'
+            '  - "don_vi_thu_hoach": Đơn vị ("kg", "tấn", "tạ", "quả"...). Null nếu không có.\n'
+            '  - "pham_cap": Phẩm cấp ("Loại 1", "Xuất khẩu", "Nội địa"...). Null nếu không có.\n'
+            '  - "thuong_lai": Tên thương lái/vựa mua. Null nếu không có.\n'
+            '  - "gia_ban": Đơn giá bán (VNĐ/đơn vị, number). Null nếu không có.\n\n'
 
             "## Ví dụ\n"
-            "Đầu vào: Sáng nay tôi phun thuốc Regent năm mươi ml cho lô A2 bưởi da xanh, "
-            "rồi chiều đi bón thêm 3 kg phân hữu cơ cho lô B1 trời nắng.\n\n"
+            "Đầu vào: Sáng nay tôi dùng máy phun đeo lưng phun Regent 50ml và Confidor 30ml cho lô A2 bưởi da xanh, "
+            "phát hiện sâu vẽ bùa mức độ nặng và nhện đỏ mức độ vừa. "
+            "Chiều thu hoạch 1500 kg loại 1 và 300 kg loại 2 bán cho công ty Nông sản giá 25000 và 18000.\n\n"
             "Đầu ra JSON:\n"
             '{"activities": [\n'
-            '  {"loai_hoat_dong": "phun_thuoc", "ngay_thuc_hien": "sáng nay", '
-            '"mo_ta": "Phun thuốc Regent 50ml cho lô A2 bưởi da xanh", '
-            '"thoi_tiet": null, '
-            '"ma_lo": "A2", "giong_buoi": "da xanh", '
-            '"ten_vat_tu": "Regent", "loai_vat_tu": "thuoc_bvtv", '
-            '"lieu_luong": 50, "don_vi": "ml"},\n'
-            '  {"loai_hoat_dong": "bon_phan", "ngay_thuc_hien": "chiều nay", '
-            '"mo_ta": "Bón 3 kg phân hữu cơ cho lô B1", '
-            '"thoi_tiet": "nắng", '
-            '"ma_lo": "B1", "giong_buoi": null, '
-            '"ten_vat_tu": "phân hữu cơ", "loai_vat_tu": "phan_bon", '
-            '"lieu_luong": 3, "don_vi": "kg"}\n'
+            '  {\n'
+            '    "loai_hoat_dong": "phun_thuoc",\n'
+            '    "ngay_thuc_hien": "sáng nay",\n'
+            '    "mo_ta": "Phun thuốc phòng trừ sâu vẽ bùa và nhện đỏ cho lô A2 bưởi da xanh",\n'
+            '    "thoi_tiet": null,\n'
+            '    "ma_lo": "A2",\n'
+            '    "cay_trong": "bưởi da xanh",\n'
+            '    "giong_buoi": "bưởi da xanh",\n'
+            '    "materials": [\n'
+            '      {"ten_vat_tu": "Regent 800WG", "loai_vat_tu": "thuoc_bvtv", "lieu_luong": 50, "don_vi": "ml"},\n'
+            '      {"ten_vat_tu": "Confidor", "loai_vat_tu": "thuoc_bvtv", "lieu_luong": 30, "don_vi": "ml"}\n'
+            '    ],\n'
+            '    "assets": [\n'
+            '      {"ten_cong_cu": "máy phun đeo lưng", "thoi_gian_su_dung": null}\n'
+            '    ],\n'
+            '    "observations": [\n'
+            '      {"trieu_chung": "sâu vẽ bùa", "muc_do": "HIGH", "mo_ta_sau_benh": "sâu vẽ bùa hại lá non nặng"},\n'
+            '      {"trieu_chung": "nhện đỏ", "muc_do": "MEDIUM", "mo_ta_sau_benh": null}\n'
+            '    ],\n'
+            '    "harvests": []\n'
+            '  },\n'
+            '  {\n'
+            '    "loai_hoat_dong": "thu_hoach",\n'
+            '    "ngay_thuc_hien": "chiều nay",\n'
+            '    "mo_ta": "Thu hoạch bưởi bán cho công ty Nông sản",\n'
+            '    "thoi_tiet": null,\n'
+            '    "ma_lo": null,\n'
+            '    "cay_trong": "bưởi da xanh",\n'
+            '    "giong_buoi": "bưởi da xanh",\n'
+            '    "materials": [],\n'
+            '    "assets": [],\n'
+            '    "observations": [],\n'
+            '    "harvests": [\n'
+            '      {"san_luong_thu_hoach": 1500, "don_vi_thu_hoach": "kg", "pham_cap": "loại 1", "thuong_lai": "công ty Nông sản", "gia_ban": 25000},\n'
+            '      {"san_luong_thu_hoach": 300, "don_vi_thu_hoach": "kg", "pham_cap": "loại 2", "thuong_lai": "công ty Nông sản", "gia_ban": 18000}\n'
+            '    ]\n'
+            '  }\n'
             "]}"
         )
         return await self._call_llm(system_prompt, raw_text, self._EXTRACT_SCHEMA)
@@ -409,12 +498,35 @@ class LLMEngine:
         # Chờ worker xử lý xong
         return await future
 
+    async def post_process_stt_with_metadata(self, raw_text: str) -> dict:
+        """
+        Xử lý gọi LLM qua queue và trả về dictionary đầy đủ metadata:
+        input, output, model_name (và model), processing_time (giây) / processing_time_ms.
+        """
+        start_time = time.monotonic()
+        output_str = await self.post_process_stt(raw_text)
+        elapsed = time.monotonic() - start_time
+        try:
+            activities = json.loads(output_str)
+        except (json.JSONDecodeError, TypeError):
+            activities = output_str
+
+        return {
+            "input": raw_text,
+            "output": activities,
+            "model": config.GEMINI_MODEL,
+            "model_name": config.GEMINI_MODEL,
+            "processing_time": round(elapsed, 3),
+            "processing_time_ms": int(elapsed * 1000),
+        }
+
     async def _do_post_process(self, raw_text: str) -> str:
         """
         Gọi LLM, unwrap wrapper {"activities": [...]}
         và trả về JSON string của array các hoạt động (đã chuẩn hóa theo schema DB).
         """
         logger.info("Bắt đầu trích xuất hoạt động canh tác bưởi...")
+        start_time = time.monotonic()
         result = await self._extract_json(raw_text)
         if not result:
             logger.warning("Trích xuất thất bại, trả về text gốc.")
@@ -429,7 +541,13 @@ class LLMEngine:
         # Chuyển bước chuẩn hóa (ngày tương đối, liều lượng, đơn vị) sang module normalizer
         activities = normalize_activity_list(activities)
 
-        logger.info("Trích xuất và chuẩn hóa thành công %d hoạt động.", len(activities))
+        elapsed = time.monotonic() - start_time
+        logger.info(
+            "Trích xuất và chuẩn hóa thành công %d hoạt động (model: %s, thời gian xử lý: %.3fs).",
+            len(activities),
+            config.GEMINI_MODEL,
+            elapsed,
+        )
         return json.dumps(activities, ensure_ascii=False, indent=2)
 
 

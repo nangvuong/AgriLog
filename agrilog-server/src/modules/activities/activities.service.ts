@@ -12,6 +12,7 @@ import {
   FarmerEntity,
   ActivityMaterialEntity,
   ActivityAssetEntity,
+  ActivityAiExtractionEntity,
 } from './entities';
 import {
   CreateActivityDto,
@@ -29,6 +30,16 @@ import {
 import { SeasonEntity } from '../seasons/season.entity';
 import { MaterialEntity } from '../materials/material.entity';
 import { AssetEntity } from '../assets/asset.entity';
+import {
+  ObservationEntity,
+  ObservationsService,
+  ObservationResponseDto,
+} from '../observations';
+import {
+  HarvestEntity,
+  HarvestsService,
+  HarvestResponseDto,
+} from '../harvests';
 import { IPaginatedResponse } from 'agrilog-shared';
 import { paginateResponse } from '../../common';
 
@@ -47,10 +58,18 @@ export class ActivitiesService {
     private readonly activityMaterialRepository: Repository<ActivityMaterialEntity>,
     @InjectRepository(ActivityAssetEntity)
     private readonly activityAssetRepository: Repository<ActivityAssetEntity>,
+    @InjectRepository(ActivityAiExtractionEntity)
+    private readonly activityAiExtractionRepository: Repository<ActivityAiExtractionEntity>,
     @InjectRepository(MaterialEntity)
     private readonly materialRepository: Repository<MaterialEntity>,
     @InjectRepository(AssetEntity)
     private readonly assetRepository: Repository<AssetEntity>,
+    @InjectRepository(ObservationEntity)
+    private readonly observationRepository: Repository<ObservationEntity>,
+    @InjectRepository(HarvestEntity)
+    private readonly harvestRepository: Repository<HarvestEntity>,
+    private readonly observationsService: ObservationsService,
+    private readonly harvestsService: HarvestsService,
   ) {}
 
   // ==========================================
@@ -164,7 +183,7 @@ export class ActivitiesService {
       );
     }
 
-    const { materials, assets, ...activityData } = dto;
+    const { materials, assets, observations, harvests, ai_extraction, ...activityData } = dto;
     const activity = this.activityRepository.create(activityData);
     const saved = await this.activityRepository.save(activity);
 
@@ -178,6 +197,40 @@ export class ActivitiesService {
       for (const ast of assets) {
         await this.insertActivityAsset(saved.id, ast);
       }
+    }
+
+    if (observations && observations.length > 0) {
+      for (const obs of observations) {
+        await this.observationsService.create({
+          ...obs,
+          activity_id: saved.id,
+        });
+      }
+    }
+
+    if (harvests && harvests.length > 0) {
+      for (const harv of harvests) {
+        await this.harvestsService.create({
+          ...harv,
+          activity_id: saved.id,
+        });
+      }
+    }
+
+    if (ai_extraction) {
+      await this.activityAiExtractionRepository.save({
+        activity_id: saved.id,
+        model_name: ai_extraction.model_name || ai_extraction.model || 'unknown',
+        prompt_version: ai_extraction.prompt_version,
+        input_text: ai_extraction.input_text || ai_extraction.input,
+        output_json: ai_extraction.output_json || ai_extraction.output,
+        confidence: ai_extraction.confidence,
+        processing_time_ms:
+          ai_extraction.processing_time_ms ??
+          (ai_extraction.processing_time
+            ? Math.round(ai_extraction.processing_time * 1000)
+            : undefined),
+      });
     }
 
     return this.findOneActivity(saved.id);
@@ -218,6 +271,9 @@ export class ActivitiesService {
     const activityIds = activities.map((a) => a.id);
     let allMaterials: ActivityMaterialEntity[] = [];
     let allAssets: ActivityAssetEntity[] = [];
+    let allObservations: ObservationEntity[] = [];
+    let allHarvests: HarvestEntity[] = [];
+    let allAiExtractions: ActivityAiExtractionEntity[] = [];
 
     if (activityIds.length > 0) {
       allMaterials = await this.activityMaterialRepository.find({
@@ -228,6 +284,17 @@ export class ActivitiesService {
         where: { activity_id: In(activityIds) },
         relations: ['asset'],
       });
+      allObservations = await this.observationRepository.find({
+        where: { activity_id: In(activityIds) },
+        order: { id: 'ASC' },
+      });
+      allHarvests = await this.harvestRepository.find({
+        where: { activity_id: In(activityIds) },
+        order: { id: 'ASC' },
+      });
+      allAiExtractions = await this.activityAiExtractionRepository.find({
+        where: { activity_id: In(activityIds) },
+      });
     }
 
     const enrichedList = activities.map((item) => {
@@ -237,6 +304,15 @@ export class ActivitiesService {
       const asts = allAssets.filter(
         (a) => Number(a.activity_id) === Number(item.id),
       );
+      const obs = allObservations.filter(
+        (o) => Number(o.activity_id) === Number(item.id),
+      );
+      const harvs = allHarvests.filter(
+        (h) => Number(h.activity_id) === Number(item.id),
+      );
+      const aiExt = allAiExtractions.find(
+        (e) => Number(e.activity_id) === Number(item.id),
+      );
       return this.enrichActivity(
         item,
         item.season,
@@ -244,6 +320,9 @@ export class ActivitiesService {
         item.activity_type,
         mats,
         asts,
+        obs,
+        harvs,
+        aiExt,
       );
     });
 
@@ -269,6 +348,17 @@ export class ActivitiesService {
       where: { activity_id: Number(id) },
       relations: ['asset'],
     });
+    const obs = await this.observationRepository.find({
+      where: { activity_id: Number(id) },
+      order: { id: 'ASC' },
+    });
+    const harvs = await this.harvestRepository.find({
+      where: { activity_id: Number(id) },
+      order: { id: 'ASC' },
+    });
+    const aiExt = await this.activityAiExtractionRepository.findOne({
+      where: { activity_id: Number(id) },
+    });
 
     return this.enrichActivity(
       activity,
@@ -277,6 +367,9 @@ export class ActivitiesService {
       activity.activity_type,
       mats,
       asts,
+      obs,
+      harvs,
+      aiExt || undefined,
     );
   }
 
@@ -385,6 +478,36 @@ export class ActivitiesService {
       }
       for (const ast of dto.assets) {
         await this.insertActivityAsset(id, ast);
+      }
+    }
+
+    if (dto.observations !== undefined) {
+      const existingObs = await this.observationRepository.find({
+        where: { activity_id: Number(id) },
+      });
+      if (existingObs.length > 0) {
+        await this.observationRepository.remove(existingObs);
+      }
+      for (const obs of dto.observations) {
+        await this.observationsService.create({
+          ...obs,
+          activity_id: Number(id),
+        });
+      }
+    }
+
+    if (dto.harvests !== undefined) {
+      const existingHarvs = await this.harvestRepository.find({
+        where: { activity_id: Number(id) },
+      });
+      if (existingHarvs.length > 0) {
+        await this.harvestRepository.remove(existingHarvs);
+      }
+      for (const harv of dto.harvests) {
+        await this.harvestsService.create({
+          ...harv,
+          activity_id: Number(id),
+        });
       }
     }
 
@@ -617,6 +740,59 @@ export class ActivitiesService {
     };
   }
 
+  private mapObservation(
+    entity: ObservationEntity,
+    activityDescription?: string,
+    seasonName?: string,
+    farmerName?: string,
+  ): ObservationResponseDto {
+    const { activity: _act, ...raw } = entity;
+    const act = entity.activity;
+    return {
+      ...raw,
+      activity_description:
+        act?.description || act?.note || activityDescription,
+      season_name:
+        act?.season
+          ? act.season.note || `Vụ #${act.season.id}`
+          : seasonName,
+      farmer_name: act?.farmer?.full_name || farmerName,
+    };
+  }
+
+  private mapHarvest(
+    entity: HarvestEntity,
+    activityDescription?: string,
+    seasonId?: number,
+    seasonName?: string,
+    farmerName?: string,
+  ): HarvestResponseDto {
+    const { activity: _act, ...raw } = entity;
+    const act = entity.activity;
+    const qty = Number(raw.quantity) || 0;
+    const price =
+      raw.selling_price !== undefined && raw.selling_price !== null
+        ? Number(raw.selling_price)
+        : undefined;
+    const total_revenue =
+      price !== undefined ? Math.round(qty * price * 100) / 100 : undefined;
+
+    return {
+      ...raw,
+      quantity: qty,
+      selling_price: price,
+      activity_description:
+        act?.description || act?.note || activityDescription,
+      season_id: act?.season_id || seasonId,
+      season_name:
+        act?.season
+          ? act.season.note || `Vụ #${act.season.id}`
+          : seasonName,
+      farmer_name: act?.farmer?.full_name || farmerName,
+      total_revenue,
+    };
+  }
+
   private enrichActivity(
     activity: ActivityEntity,
     season?: SeasonEntity,
@@ -624,6 +800,9 @@ export class ActivitiesService {
     activityType?: ActivityTypeEntity,
     materials: ActivityMaterialEntity[] = [],
     assets: ActivityAssetEntity[] = [],
+    observations: ObservationEntity[] = [],
+    harvests: HarvestEntity[] = [],
+    aiExtraction?: ActivityAiExtractionEntity,
   ): ActivityResponseDto {
     const {
       season: _s,
@@ -632,14 +811,38 @@ export class ActivitiesService {
       ...raw
     } = activity;
 
+    const sName = season ? season.note || `Vụ #${season.id}` : undefined;
+    const fName = farmer?.full_name;
+
     return {
       ...raw,
-      season_name: season ? season.note || `Vụ #${season.id}` : undefined,
-      farmer_name: farmer?.full_name,
+      season_name: sName,
+      farmer_name: fName,
       activity_type_code: activityType?.code,
       activity_type_name: activityType?.name,
       materials: materials.map((m) => this.mapActivityMaterial(m)),
       assets: assets.map((a) => this.mapActivityAsset(a)),
+      observations: observations.map((o) =>
+        this.mapObservation(o, raw.description, sName, fName),
+      ),
+      harvests: harvests.map((h) =>
+        this.mapHarvest(h, raw.description, season?.id, sName, fName),
+      ),
+      ai_extraction: aiExtraction
+        ? {
+            id: Number(aiExtraction.id),
+            activity_id: Number(aiExtraction.activity_id),
+            model_name: aiExtraction.model_name,
+            prompt_version: aiExtraction.prompt_version,
+            input_text: aiExtraction.input_text,
+            output_json: aiExtraction.output_json,
+            confidence: aiExtraction.confidence
+              ? Number(aiExtraction.confidence)
+              : undefined,
+            processing_time_ms: aiExtraction.processing_time_ms,
+            created_at: aiExtraction.created_at,
+          }
+        : undefined,
     };
   }
 }

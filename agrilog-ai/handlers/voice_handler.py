@@ -20,35 +20,44 @@ from services.stt_engine import STTError, stt_engine
 
 logger = logging.getLogger(__name__)
 
-# Telegram giới hạn 1 tin nhắn text tối đa 4096 ký tự. Với audio dài (vd. 30
 # phút), transcript rất dễ vượt mức này -> phải gửi dưới dạng file thay vì
 # edit_text (nếu không sẽ lỗi khi gửi).
 TELEGRAM_TEXT_LIMIT = 4096
 
 ACTIVITY_NAMES = {
     "bon_phan": "Bón phân",
+    "FERTILIZE": "Bón phân",
     "phun_thuoc": "Phun thuốc BVTV",
+    "SPRAY": "Phun thuốc BVTV",
     "tuoi_nuoc": "Tưới nước",
+    "IRRIGATE": "Tưới nước",
+    "cat_tia": "Cắt tỉa cành",
     "tia_canh": "Tỉa cành / Tạo tán",
+    "PRUNE": "Cắt tỉa cành",
     "lam_co": "Làm cỏ",
     "be_qua": "Bẻ quả / Tỉa trái",
+    "sau_benh": "Kiểm tra sâu bệnh",
     "kiem_tra_sau_benh": "Kiểm tra sâu bệnh",
+    "SCOUT": "Kiểm tra sâu bệnh",
+    "thu_hoach": "Thu hoạch",
+    "HARVEST": "Thu hoạch",
     "khac": "Hoạt động khác",
+    "OTHER": "Hoạt động khác",
 }
 
 MATERIAL_TYPES = {
     "phan_bon": "Phân bón",
     "thuoc_bvtv": "Thuốc BVTV",
     "che_pham_sinh_hoc": "Chế phẩm sinh học",
+    "khac": "Khác",
 }
 
 
 def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, str]:
     """
     Định dạng kết quả JSON trả về cho Telegram Bot:
-    - Trình bày tóm tắt tiếng Việt trực quan, minh bạch với biểu tượng nông nghiệp (🌱, 🗓️, 📝, 📍, 📦, 🌤️).
-    - Hiển thị khối JSON Dữ Liệu chuẩn CSDL (bảng hoat_dong_canh_tac, chi_tiet_vat_tu_su_dung, lo_dat)
-      trong thẻ HTML <pre><code class="language-json">...</code></pre>.
+    - Trình bày tóm tắt tiếng Việt trực quan, minh bạch với biểu tượng nông nghiệp (🌱, 🗓️, 📝, 📍, 📦, 🛠️, 🐛, 🌾, 🌤️).
+    - Hiển thị khối JSON Dữ Liệu chuẩn CSDL PostgreSQL trong thẻ HTML <pre><code class="language-json">...</code></pre>.
     Trả về: (full_msg, summary_msg, parse_mode, file_content, filename)
     """
     try:
@@ -58,7 +67,7 @@ def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, s
             return raw_text, raw_text, None, raw_text, "ket_qua.txt"
 
         lines = [
-            "<b>🌱 NHẬT KÝ CANH TÁC BƯỞI EXPORT (GLOBALGAP)</b>",
+            "<b>🌱 NHẬT KÝ CANH TÁC NÔNG NGHIỆP</b>",
             "━━━━━━━━━━━━━━━━━━━━━━",
         ]
 
@@ -66,7 +75,7 @@ def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, s
             if not isinstance(item, dict):
                 continue
             loai_key = str(item.get("loai_hoat_dong") or "khac").lower()
-            loai_vn = ACTIVITY_NAMES.get(loai_key, "Hoạt động khác")
+            loai_vn = ACTIVITY_NAMES.get(loai_key, ACTIVITY_NAMES.get(item.get("activity_type_code"), "Hoạt động khác"))
             ngay = item.get("ngay_thuc_hien")
             header = f"<b>{idx}. {html.escape(loai_vn)}</b>"
             if ngay:
@@ -78,26 +87,79 @@ def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, s
                 lines.append(f"  • 📝 <b>Mô tả:</b> {html.escape(str(mo_ta))}")
 
             ma_lo = item.get("ma_lo")
-            giong = item.get("giong_buoi")
+            giong = item.get("cay_trong") or item.get("giong_buoi")
             if ma_lo or giong:
                 lo_str = f"Lô {ma_lo}" if ma_lo else ""
-                giong_str = f"Giống: {giong}" if giong else ""
+                giong_str = f"Cây trồng: {giong}" if giong else ""
                 comb = " | ".join(filter(None, [lo_str, giong_str]))
-                lines.append(f"  • 📍 <b>Lô/Giống:</b> {html.escape(comb)}")
+                lines.append(f"  • 📍 <b>Lô/Cây trồng:</b> {html.escape(comb)}")
 
-            vat_tu = item.get("ten_vat_tu")
-            if vat_tu:
-                lieu_luong = item.get("lieu_luong")
-                don_vi = item.get("don_vi")
+            # --- materials (array mới) ---
+            materials = item.get("materials") or []
+            for mat in materials:
+                if not isinstance(mat, dict):
+                    continue
+                vat_tu = mat.get("ten_vat_tu")
+                if not vat_tu:
+                    continue
+                lieu_luong = mat.get("lieu_luong")
+                don_vi = mat.get("don_vi")
                 ll_str = (
                     f" ({lieu_luong} {don_vi})"
                     if lieu_luong is not None and don_vi
                     else (f" ({lieu_luong})" if lieu_luong is not None else "")
                 )
-                loai_vt = item.get("loai_vat_tu")
+                loai_vt = mat.get("loai_vat_tu")
                 vt_type_str = f" [{MATERIAL_TYPES.get(loai_vt, str(loai_vt))}]" if loai_vt else ""
                 lines.append(
                     f"  • 📦 <b>Vật tư:</b> {html.escape(str(vat_tu))}{html.escape(ll_str)}{html.escape(vt_type_str)}"
+                )
+
+            # --- assets (array mới) ---
+            assets = item.get("assets") or []
+            for ast in assets:
+                if not isinstance(ast, dict):
+                    continue
+                cong_cu = ast.get("ten_cong_cu")
+                if not cong_cu:
+                    continue
+                tg_sd = ast.get("thoi_gian_su_dung")
+                tg_str = f" ({tg_sd} phút)" if tg_sd is not None else ""
+                lines.append(
+                    f"  • 🛠️ <b>Công cụ:</b> {html.escape(str(cong_cu))}{html.escape(tg_str)}"
+                )
+
+            # --- observations (array mới) ---
+            observations = item.get("observations") or []
+            for obs in observations:
+                if not isinstance(obs, dict):
+                    continue
+                trieu_chung = obs.get("trieu_chung")
+                if not trieu_chung:
+                    continue
+                muc_do = obs.get("muc_do")
+                md_str = f" [Mức độ: {muc_do}]" if muc_do else ""
+                lines.append(
+                    f"  • 🐛 <b>Sâu bệnh:</b> {html.escape(str(trieu_chung))}{html.escape(md_str)}"
+                )
+
+            # --- harvests (array mới) ---
+            harvests = item.get("harvests") or []
+            for harv in harvests:
+                if not isinstance(harv, dict):
+                    continue
+                san_luong = harv.get("san_luong_thu_hoach")
+                if san_luong is None:
+                    continue
+                dv_th = harv.get("don_vi_thu_hoach") or "kg"
+                pc = harv.get("pham_cap")
+                pc_str = f" [{pc}]" if pc else ""
+                tl = harv.get("thuong_lai")
+                tl_str = f" - Bán cho: {tl}" if tl else ""
+                gia = harv.get("gia_ban")
+                gia_str = f" ({gia:,.0f} đ/kg)" if gia else ""
+                lines.append(
+                    f"  • 🌾 <b>Thu hoạch:</b> {html.escape(str(san_luong))} {html.escape(str(dv_th))}{html.escape(pc_str)}{html.escape(tl_str)}{html.escape(gia_str)}"
                 )
 
             thoi_tiet = item.get("thoi_tiet")
@@ -106,11 +168,12 @@ def format_telegram_message(raw_text: str) -> tuple[str, str, str | None, str, s
 
             lines.append("")  # Dòng trống phân cách giữa các hoạt động
 
+
         json_pretty = json.dumps(activities, ensure_ascii=False, indent=2)
         summary_only = "\n".join(lines).strip()
         if len(summary_only) > TELEGRAM_TEXT_LIMIT:
             summary_only = (
-                "<b>🌱 NHẬT KÝ CANH TÁC BƯỞI EXPORT</b>\n"
+                "<b>🌱 NHẬT KÝ CANH TÁC NÔNG NGHIỆP</b>\n"
                 "<i>(Danh sách hoạt động quá dài, vui lòng xem chi tiết trong file JSON đính kèm bên dưới)</i>"
             )
 

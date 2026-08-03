@@ -14,7 +14,7 @@ export interface IObservationDto {
 }
 
 export interface ICreateObservationDto {
-  activity_id: number;
+  activity_id?: number;
   symptom: string;
   severity?: SeverityLevel;
   description?: string;

@@ -14,7 +14,9 @@ import {
 import {
   AiStatus,
   IActivityDto,
+  IActivityAiExtractionDto,
   ICreateActivityDto,
+  ICreateActivityAiExtractionDto,
   IUpdateActivityDto,
   SourceType,
 } from 'agrilog-shared';
@@ -24,6 +26,93 @@ import {
   CreateActivityAssetDto,
   CreateActivityMaterialDto,
 } from './activity-resources.dto';
+import {
+  CreateObservationDto,
+  ObservationResponseDto,
+} from '../../observations/dto';
+import {
+  CreateHarvestDto,
+  HarvestResponseDto,
+} from '../../harvests/dto';
+
+export class CreateActivityAiExtractionDto implements ICreateActivityAiExtractionDto {
+  @ApiProperty({ example: 'gemini-2.5-pro', description: 'Tên model AI' })
+  @IsNotEmpty()
+  @IsString()
+  model_name!: string;
+
+  @ApiPropertyOptional({ example: 'gemini-2.5-pro', description: 'Alias cho tên model AI' })
+  @IsOptional()
+  @IsString()
+  model?: string;
+
+  @ApiPropertyOptional({ example: 'v1.0', description: 'Phiên bản prompt' })
+  @IsOptional()
+  @IsString()
+  prompt_version?: string;
+
+  @ApiPropertyOptional({ description: 'Văn bản đầu vào cho AI trích xuất' })
+  @IsOptional()
+  @IsString()
+  input_text?: string;
+
+  @ApiPropertyOptional({ description: 'Văn bản đầu vào (alias)' })
+  @IsOptional()
+  @IsString()
+  input?: string;
+
+  @ApiPropertyOptional({ description: 'Dữ liệu JSON đầu ra từ AI' })
+  @IsOptional()
+  output_json?: any;
+
+  @ApiPropertyOptional({ description: 'Dữ liệu JSON đầu ra (alias)' })
+  @IsOptional()
+  output?: any;
+
+  @ApiPropertyOptional({ example: 0.95, description: 'Độ tin cậy của AI (0-1)' })
+  @IsOptional()
+  @IsNumber()
+  confidence?: number;
+
+  @ApiPropertyOptional({ example: 450, description: 'Thời gian xử lý (ms)' })
+  @IsOptional()
+  @IsInt()
+  processing_time_ms?: number;
+
+  @ApiPropertyOptional({ example: 0.45, description: 'Thời gian xử lý (giây)' })
+  @IsOptional()
+  @IsNumber()
+  processing_time?: number;
+}
+
+export class ActivityAiExtractionResponseDto implements IActivityAiExtractionDto {
+  @ApiProperty({ example: 1, description: 'ID' })
+  id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID hoạt động' })
+  activity_id!: number;
+
+  @ApiProperty({ example: 'gemini-2.5-pro', description: 'Tên model AI' })
+  model_name!: string;
+
+  @ApiPropertyOptional({ example: 'v1.0', description: 'Phiên bản prompt' })
+  prompt_version?: string;
+
+  @ApiPropertyOptional({ description: 'Văn bản đầu vào cho AI trích xuất' })
+  input_text?: string;
+
+  @ApiPropertyOptional({ description: 'Dữ liệu JSON đầu ra từ AI' })
+  output_json?: any;
+
+  @ApiPropertyOptional({ example: 0.95, description: 'Độ tin cậy của AI' })
+  confidence?: number;
+
+  @ApiPropertyOptional({ example: 450, description: 'Thời gian xử lý (ms)' })
+  processing_time_ms?: number;
+
+  @ApiProperty({ description: 'Thời gian tạo' })
+  created_at!: string | Date;
+}
 
 export class CreateActivityDto implements ICreateActivityDto {
   @ApiProperty({ example: 1, description: 'ID vụ mùa (Season)' })
@@ -126,6 +215,35 @@ export class CreateActivityDto implements ICreateActivityDto {
   @ValidateNested({ each: true })
   @Type(() => CreateActivityAssetDto)
   assets?: CreateActivityAssetDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateObservationDto],
+    description: 'Danh sách quan sát/sâu bệnh ghi nhận trong hoạt động',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateObservationDto)
+  observations?: CreateObservationDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateHarvestDto],
+    description: 'Danh sách thu hoạch ghi nhận trong hoạt động',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateHarvestDto)
+  harvests?: CreateHarvestDto[];
+
+  @ApiPropertyOptional({
+    type: CreateActivityAiExtractionDto,
+    description: 'Thông tin metadata AI trích xuất (model, input, output, thời gian xử lý)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateActivityAiExtractionDto)
+  ai_extraction?: CreateActivityAiExtractionDto;
 }
 
 export class UpdateActivityDto implements IUpdateActivityDto {
@@ -208,6 +326,26 @@ export class UpdateActivityDto implements IUpdateActivityDto {
   @ValidateNested({ each: true })
   @Type(() => CreateActivityAssetDto)
   assets?: CreateActivityAssetDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateObservationDto],
+    description: 'Danh sách quan sát/sâu bệnh cập nhật',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateObservationDto)
+  observations?: CreateObservationDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateHarvestDto],
+    description: 'Danh sách thu hoạch cập nhật',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateHarvestDto)
+  harvests?: CreateHarvestDto[];
 }
 
 export class ActivityResponseDto implements IActivityDto {
@@ -276,4 +414,22 @@ export class ActivityResponseDto implements IActivityDto {
     description: 'Danh sách máy móc / thiết bị sử dụng trong hoạt động',
   })
   assets?: ActivityAssetResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [ObservationResponseDto],
+    description: 'Danh sách quan sát / sâu bệnh ghi nhận trong hoạt động',
+  })
+  observations?: ObservationResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [HarvestResponseDto],
+    description: 'Danh sách thu hoạch nông sản trong hoạt động',
+  })
+  harvests?: HarvestResponseDto[];
+
+  @ApiPropertyOptional({
+    type: ActivityAiExtractionResponseDto,
+    description: 'Thông tin AI trích xuất (model, input, output, thời gian xử lý)',
+  })
+  ai_extraction?: ActivityAiExtractionResponseDto;
 }

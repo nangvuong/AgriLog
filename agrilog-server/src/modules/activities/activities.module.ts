@@ -6,6 +6,7 @@ import {
   FarmerEntity,
   ActivityMaterialEntity,
   ActivityAssetEntity,
+  ActivityAiExtractionEntity,
 } from './entities';
 import { SeasonEntity } from '../seasons/season.entity';
 import { MaterialEntity } from '../materials/material.entity';
@@ -13,8 +14,14 @@ import { AssetEntity } from '../assets/asset.entity';
 import { ActivitiesService } from './activities.service';
 import { ActivitiesController } from './activities.controller';
 import { ActivityTypesController } from './activity-types.controller';
-import { ObservationsModule } from '../observations';
-import { HarvestsModule } from '../harvests';
+import {
+  ObservationsModule,
+  ObservationEntity,
+} from '../observations';
+import {
+  HarvestsModule,
+  HarvestEntity,
+} from '../harvests';
 
 @Module({
   imports: [
@@ -25,8 +32,11 @@ import { HarvestsModule } from '../harvests';
       SeasonEntity,
       ActivityMaterialEntity,
       ActivityAssetEntity,
+      ActivityAiExtractionEntity,
       MaterialEntity,
       AssetEntity,
+      ObservationEntity,
+      HarvestEntity,
     ]),
     ObservationsModule,
     HarvestsModule,
