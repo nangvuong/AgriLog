@@ -7,6 +7,7 @@ import {
   ActivityMaterialEntity,
   ActivityAssetEntity,
   ActivityAiExtractionEntity,
+  ActivityMediaEntity,
 } from './entities';
 import { SeasonEntity } from '../seasons/season.entity';
 import { MaterialEntity } from '../materials/material.entity';
@@ -22,6 +23,7 @@ import {
   HarvestsModule,
   HarvestEntity,
 } from '../harvests';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import {
       ActivityMaterialEntity,
       ActivityAssetEntity,
       ActivityAiExtractionEntity,
+      ActivityMediaEntity,
       MaterialEntity,
       AssetEntity,
       ObservationEntity,
@@ -40,6 +43,7 @@ import {
     ]),
     ObservationsModule,
     HarvestsModule,
+    StorageModule,
   ],
   controllers: [ActivitiesController, ActivityTypesController],
   providers: [ActivitiesService],

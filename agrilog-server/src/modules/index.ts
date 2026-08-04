@@ -11,3 +11,4 @@ export * from './activities';
 export * from './observations';
 export * from './inventories';
 export * from './harvests';
+export * from './storage/storage.module';

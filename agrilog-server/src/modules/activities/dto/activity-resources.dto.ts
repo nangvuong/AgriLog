@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -11,8 +12,11 @@ import {
 import {
   IActivityAssetDto,
   IActivityMaterialDto,
+  IActivityMediaDto,
   ICreateActivityAssetDto,
   ICreateActivityMaterialDto,
+  ICreateActivityMediaDto,
+  MediaType,
 } from 'agrilog-shared';
 
 export class CreateActivityMaterialDto implements ICreateActivityMaterialDto {
@@ -101,3 +105,79 @@ export class ActivityAssetResponseDto implements IActivityAssetDto {
   @ApiPropertyOptional({ example: 'may_phun', description: 'Phân loại tài sản' })
   asset_type?: string;
 }
+
+export class CreateActivityMediaDto implements ICreateActivityMediaDto {
+  @ApiProperty({
+    enum: MediaType,
+    example: MediaType.IMAGE,
+    description: 'Loại media (IMAGE, AUDIO, VIDEO)',
+  })
+  @IsEnum(MediaType)
+  media_type!: MediaType;
+
+  @ApiPropertyOptional({ example: 'photo_123.jpg', description: 'Tên file' })
+  @IsOptional()
+  @IsString()
+  file_name?: string;
+
+  @ApiProperty({
+    example: 'https://supabase.co/storage/v1/object/public/...',
+    description: 'URL file media',
+  })
+  @IsNotEmpty()
+  @IsString()
+  file_url!: string;
+
+  @ApiPropertyOptional({ description: 'URL ảnh thu nhỏ' })
+  @IsOptional()
+  @IsString()
+  thumbnail_url?: string;
+
+  @ApiPropertyOptional({ example: 'image/jpeg', description: 'MIME type' })
+  @IsOptional()
+  @IsString()
+  mime_type?: string;
+
+  @ApiPropertyOptional({ example: 102400, description: 'Dung lượng file (bytes)' })
+  @IsOptional()
+  @IsNumber()
+  file_size?: number;
+
+  @ApiPropertyOptional({ example: 60, description: 'Thời lượng (giây) nếu là audio/video' })
+  @IsOptional()
+  @IsNumber()
+  duration?: number;
+}
+
+export class ActivityMediaResponseDto implements IActivityMediaDto {
+  @ApiProperty({ example: 1, description: 'ID media' })
+  id!: number;
+
+  @ApiProperty({ example: 1, description: 'ID hoạt động' })
+  activity_id!: number;
+
+  @ApiProperty({ enum: MediaType, example: MediaType.IMAGE })
+  media_type!: MediaType;
+
+  @ApiPropertyOptional()
+  file_name?: string;
+
+  @ApiProperty()
+  file_url!: string;
+
+  @ApiPropertyOptional()
+  thumbnail_url?: string;
+
+  @ApiPropertyOptional()
+  mime_type?: string;
+
+  @ApiPropertyOptional()
+  file_size?: number;
+
+  @ApiPropertyOptional()
+  duration?: number;
+
+  @ApiProperty()
+  created_at!: Date;
+}
+

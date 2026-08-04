@@ -36,7 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={id}
             type={type}
             className={cn(
-              'flex h-10 w-full rounded-md border bg-white px-3 py-2 text-[13.5px] text-[#262A1E] shadow-sm outline-none transition file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[#A8AC86] disabled:cursor-not-allowed disabled:opacity-50',
+              'flex h-10 min-h-10 max-h-10 w-full appearance-none rounded-md border bg-white px-3 py-1.5 text-[14px] leading-normal text-[#262A1E] shadow-sm outline-none transition sm:text-[13.5px] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[#A8AC86] disabled:cursor-not-allowed disabled:opacity-50 [type=date]:py-1 [type=datetime-local]:py-1 [type=time]:py-1',
               error
                 ? 'border-[#C15A34] focus-visible:ring-2 focus-visible:ring-[#C15A34]/30'
                 : 'border-[#DCE0C4] focus-visible:border-[#C9A227] focus-visible:ring-2 focus-visible:ring-[#C9A227]/30',

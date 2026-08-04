@@ -18,6 +18,7 @@ import {
   ObservationsModule,
   InventoriesModule,
   HarvestsModule,
+  StorageModule,
 } from './modules';
 import { databaseConfig, redisConfig } from './config';
 
@@ -42,6 +43,7 @@ import { databaseConfig, redisConfig } from './config';
     ObservationsModule,
     InventoriesModule,
     HarvestsModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

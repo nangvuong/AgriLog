@@ -40,11 +40,11 @@ export function Dialog({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ type: 'spring', stiffness: 350, damping: 28 }}
             className={cn(
-              'relative w-full max-w-md rounded-2xl border border-[#E1E5CB] bg-[#FFFDF6] shadow-xl',
+              'relative flex max-h-[92vh] w-full max-w-2xl sm:max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#E1E5CB] bg-[#FFFDF6] shadow-xl',
               className,
             )}
           >
-            <div className="flex items-start justify-between gap-3 border-b border-[#EEF0E1] p-5">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#EEF0E1] p-4 sm:p-5">
               <div>
                 {title && (
                   <h3
@@ -72,9 +72,9 @@ export function Dialog({
                 <X className="h-4.5 w-4.5" strokeWidth={1.75} />
               </button>
             </div>
-            <div className="p-5">{children}</div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">{children}</div>
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-[#EEF0E1] p-4">
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[#EEF0E1] p-4">
                 {footer}
               </div>
             )}

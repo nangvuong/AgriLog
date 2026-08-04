@@ -4,14 +4,38 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+function parseCorsOrigins(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Kích hoạt CORS cho ứng dụng Web Frontend
+  // Cho phép Private Network Access (PNA) từ Chrome/Safari khi gọi từ HTTPS (ngrok) xuống HTTP (local server)
+  app.use((req: any, res: any, next: any) => {
+    res.header('Access-Control-Allow-Private-Network', 'true');
+    next();
+  });
+
+  // Kích hoạt CORS cho ứng dụng Web Frontend (cho phép tất cả origin bao gồm ngrok, localhost, LAN IP)
   app.enableCors({
-    origin: '*',
+    origin: (
+      requestOrigin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      callback(null, true);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders:
+      'Content-Type, Accept, Authorization, X-Requested-With, ngrok-skip-browser-warning, Access-Control-Request-Private-Network',
   });
 
   // Thiết lập tiền tố /api cho tất cả endpoints

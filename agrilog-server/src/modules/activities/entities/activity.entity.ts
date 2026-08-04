@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -11,6 +12,7 @@ import { AiStatus, SourceType } from 'agrilog-shared';
 import { SeasonEntity } from '../../seasons/season.entity';
 import { FarmerEntity } from './farmer.entity';
 import { ActivityTypeEntity } from './activity-type.entity';
+import { ActivityMediaEntity } from './activity-media.entity';
 
 @Entity({ name: 'activity' })
 export class ActivityEntity {
@@ -72,9 +74,15 @@ export class ActivityEntity {
   })
   ai_status?: AiStatus | null;
 
+  @OneToMany(() => ActivityMediaEntity, (media) => media.activity, {
+    cascade: true,
+  })
+  media?: ActivityMediaEntity[];
+
   @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at!: Date;
 }
+

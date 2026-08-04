@@ -17,7 +17,7 @@ CREATE TYPE gender_type AS ENUM ('MALE', 'FEMALE', 'OTHER');
 CREATE TYPE season_status AS ENUM ('PLANNED', 'GROWING', 'HARVESTED', 'CANCELLED');
 CREATE TYPE plot_status AS ENUM ('ACTIVE', 'FALLOW', 'INACTIVE');
 
-CREATE TYPE source_type AS ENUM ('VOICE', 'TEXT', 'IMAGE', 'MANUAL');
+CREATE TYPE source_type AS ENUM ('VOICE', 'TEXT', 'IMAGE', 'VIDEO', 'MANUAL');
 CREATE TYPE ai_status AS ENUM ('PENDING', 'PROCESSING', 'FAILED', 'COMPLETED', 'CONFIRMED');
 
 CREATE TYPE media_type AS ENUM ('IMAGE', 'AUDIO', 'VIDEO');
@@ -195,6 +195,8 @@ CREATE TABLE activity_media (
     duration        INTEGER CHECK (duration >= 0), -- giây
     created_at      TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_activity_media_activity ON activity_media(activity_id);
 
 -- ============================================================
 -- 11. ACTIVITY TRANSCRIPT

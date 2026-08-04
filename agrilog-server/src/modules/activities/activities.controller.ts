@@ -11,7 +11,10 @@ import {
   Post,
   Query,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -51,7 +54,48 @@ export class ActivitiesController {
     private readonly activitiesService: ActivitiesService,
     private readonly observationsService: ObservationsService,
     private readonly harvestsService: HarvestsService,
-  ) {}
+  ) { }
+
+  // ==========================================
+  // AI / NLP EXTRACTION ENDPOINTS
+  // ==========================================
+
+  @Post('extract/text')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
+  @ApiOperation({
+    summary: 'Bóc tách thông tin nhật ký canh tác từ văn bản (STT / NLP)',
+  })
+  async extractText(@Body() body: { text: string }) {
+    return this.activitiesService.extractFromText(body.text);
+  }
+
+  @Post('extract/voice')
+  @UseInterceptors(FileInterceptor('file'))
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
+  @ApiOperation({
+    summary:
+      'Nhận dạng giọng nói (STT) và bóc tách thông tin nhật ký canh tác từ audio file',
+  })
+  async extractVoice(
+    @UploadedFile() file: any,
+    @Body() body?: { process_llm?: boolean },
+  ) {
+    return this.activitiesService.extractFromAudio(file, body?.process_llm);
+  }
+
+  @Post('extract/video')
+  @UseInterceptors(FileInterceptor('file'))
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
+  @ApiOperation({
+    summary:
+      'Nhận dạng và bóc tách thông tin nhật ký canh tác từ Video file',
+  })
+  async extractVideo(
+    @UploadedFile() file: any,
+    @Body() body?: { description?: string },
+  ) {
+    return this.activitiesService.extractFromVideo(file, body?.description);
+  }
 
   // ==========================================
   // ACTIVITIES CRUD
@@ -61,14 +105,13 @@ export class ActivitiesController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
   @ApiOperation({
     summary:
-      'Ghi nhật ký hoạt động canh tác mới (hỗ trợ kèm vật tư, máy móc, quan sát sâu bệnh & thu hoạch)',
+      'Ghi nhật ký hoạt động canh tác mới (hỗ trợ 1 hoặc nhiều hoạt động trong cùng 1 lần request)',
     description:
-      'Ghi nhận một hoạt động canh tác trên vụ mùa (ví dụ: bón phân, tưới nước, phun thuốc, kiểm tra sâu bệnh, thu hoạch...) với thời gian, tọa độ, nguồn ghi nhận (MANUAL, VOICE, TEXT, IMAGE), đồng thời cho phép gán danh sách vật tư sử dụng (materials), máy móc/thiết bị sử dụng (assets), quan sát/sâu bệnh (observations), và sản lượng thu hoạch (harvests) ngay trong cùng một yêu cầu.',
+      'Ghi nhận một hoặc danh sách nhiều hoạt động canh tác trên vụ mùa (ví dụ: bón phân, tưới nước, phun thuốc, kiểm tra sâu bệnh, thu hoạch...) với thời gian, tọa độ, nguồn ghi nhận (MANUAL, VOICE, TEXT, IMAGE), đồng thời cho phép gán danh sách vật tư sử dụng (materials), máy móc/thiết bị sử dụng (assets), quan sát/sâu bệnh (observations), và sản lượng thu hoạch (harvests) ngay trong cùng một yêu cầu.',
   })
   @ApiResponse({
     status: 201,
     description: 'Ghi nhận nhật ký thành công',
-    type: ActivityResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -79,8 +122,39 @@ export class ActivitiesController {
     status: 404,
     description: 'Vụ mùa, nông dân, loại hoạt động, vật tư hoặc tài sản không tồn tại',
   })
-  async create(@Body() dto: CreateActivityDto): Promise<ActivityResponseDto> {
+  async create(
+    @Body() dto: CreateActivityDto | CreateActivityDto[],
+  ): Promise<ActivityResponseDto | ActivityResponseDto[]> {
+    if (Array.isArray(dto)) {
+      return this.activitiesService.createActivitiesBulk(dto);
+    }
     return this.activitiesService.createActivity(dto);
+  }
+
+  @Post('bulk')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
+  @ApiOperation({
+    summary: 'Ghi nhiều nhật ký hoạt động canh tác cùng lúc (bulk create)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Ghi nhận danh sách nhật ký thành công',
+  })
+  async createBulk(
+    @Body() dtos: CreateActivityDto[],
+  ): Promise<ActivityResponseDto[]> {
+    return this.activitiesService.createActivitiesBulk(dtos);
+  }
+
+  @Post('batch')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.FARMER)
+  @ApiOperation({
+    summary: 'Ghi nhiều nhật ký hoạt động canh tác cùng lúc (batch create)',
+  })
+  async createBatch(
+    @Body() dtos: CreateActivityDto[],
+  ): Promise<ActivityResponseDto[]> {
+    return this.activitiesService.createActivitiesBulk(dtos);
   }
 
   @Get()

@@ -23,8 +23,10 @@ import {
 import {
   ActivityAssetResponseDto,
   ActivityMaterialResponseDto,
+  ActivityMediaResponseDto,
   CreateActivityAssetDto,
   CreateActivityMaterialDto,
+  CreateActivityMediaDto,
 } from './activity-resources.dto';
 import {
   CreateObservationDto,
@@ -115,23 +117,43 @@ export class ActivityAiExtractionResponseDto implements IActivityAiExtractionDto
 }
 
 export class CreateActivityDto implements ICreateActivityDto {
-  @ApiProperty({ example: 1, description: 'ID vụ mùa (Season)' })
+  @ApiPropertyOptional({ example: 1, description: 'ID vụ mùa (Season)' })
+  @IsOptional()
   @Type(() => Number)
-  @IsNotEmpty()
   @IsInt()
-  season_id!: number;
+  season_id?: number;
 
-  @ApiProperty({ example: 1, description: 'ID người nông dân thực hiện' })
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsInt()
-  farmer_id!: number;
+  @ApiPropertyOptional({ example: 'A1', description: 'Mã thửa đất (Plot code)' })
+  @IsOptional()
+  @IsString()
+  plot_code?: string;
 
-  @ApiProperty({ example: 1, description: 'ID loại hoạt động canh tác (ActivityType)' })
+  @ApiPropertyOptional({ example: 1, description: 'ID người nông dân thực hiện' })
+  @IsOptional()
   @Type(() => Number)
-  @IsNotEmpty()
   @IsInt()
-  activity_type_id!: number;
+  farmer_id?: number;
+
+  @ApiPropertyOptional({ example: 'Ông Ba', description: 'Họ tên nông dân' })
+  @IsOptional()
+  @IsString()
+  farmer_name?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID loại hoạt động canh tác (ActivityType)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  activity_type_id?: number;
+
+  @ApiPropertyOptional({ example: 'FERTILIZE', description: 'Mã loại hoạt động canh tác' })
+  @IsOptional()
+  @IsString()
+  activity_type_code?: string;
+
+  @ApiPropertyOptional({ example: 'FERTILIZE', description: 'Mã loại hoạt động canh tác (alias)' })
+  @IsOptional()
+  @IsString()
+  activity_type?: string;
 
   @ApiPropertyOptional({
     example: 'Bón lót phân hữu cơ vi sinh Đầu Trâu đầu vụ cho Lô A',
@@ -235,6 +257,16 @@ export class CreateActivityDto implements ICreateActivityDto {
   @ValidateNested({ each: true })
   @Type(() => CreateHarvestDto)
   harvests?: CreateHarvestDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateActivityMediaDto],
+    description: 'Danh sách media (ảnh/video/audio) đính kèm hoạt động',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityMediaDto)
+  media?: CreateActivityMediaDto[];
 
   @ApiPropertyOptional({
     type: CreateActivityAiExtractionDto,
@@ -346,6 +378,16 @@ export class UpdateActivityDto implements IUpdateActivityDto {
   @ValidateNested({ each: true })
   @Type(() => CreateHarvestDto)
   harvests?: CreateHarvestDto[];
+
+  @ApiPropertyOptional({
+    type: [CreateActivityMediaDto],
+    description: 'Danh sách media (ảnh/video/audio) cập nhật',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityMediaDto)
+  media?: CreateActivityMediaDto[];
 }
 
 export class ActivityResponseDto implements IActivityDto {
@@ -394,6 +436,15 @@ export class ActivityResponseDto implements IActivityDto {
   @ApiPropertyOptional({ example: 'Vụ Xuân Hè 2026', description: 'Tên/mô tả vụ mùa' })
   season_name?: string;
 
+  @ApiPropertyOptional({ example: 1, description: 'ID thửa đất / lô canh tác' })
+  plot_id?: number;
+
+  @ApiPropertyOptional({ example: 'A1', description: 'Mã thửa đất' })
+  plot_code?: string;
+
+  @ApiPropertyOptional({ example: 'Ruộng trước nhà', description: 'Tên thửa đất' })
+  plot_name?: string;
+
   @ApiPropertyOptional({ example: 'Nguyễn Văn A', description: 'Họ tên nông dân thực hiện' })
   farmer_name?: string;
 
@@ -426,6 +477,12 @@ export class ActivityResponseDto implements IActivityDto {
     description: 'Danh sách thu hoạch nông sản trong hoạt động',
   })
   harvests?: HarvestResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [ActivityMediaResponseDto],
+    description: 'Danh sách media (ảnh/video/audio) đính kèm',
+  })
+  media?: ActivityMediaResponseDto[];
 
   @ApiPropertyOptional({
     type: ActivityAiExtractionResponseDto,

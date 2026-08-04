@@ -4,3 +4,4 @@ export * from './activity.entity';
 export * from './activity-material.entity';
 export * from './activity-asset.entity';
 export * from './activity-ai-extraction.entity';
+export * from './activity-media.entity';

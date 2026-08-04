@@ -84,6 +84,7 @@ cp .env.example .env
 Nội dung `.env` mẫu:
 ```env
 PORT=3000
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://washout-diagnosis-dimly.ngrok-free.dev
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/agrilog_db
 JWT_SECRET=agrilog_secret_key_development_only
 JWT_EXPIRES_IN=1d

@@ -6,8 +6,7 @@ import { AiStatus, IActivityQueryDto, SourceType } from 'agrilog-shared';
 
 export class ActivityQueryDto
   extends PaginationQueryDto
-  implements IActivityQueryDto
-{
+  implements IActivityQueryDto {
   @ApiPropertyOptional({
     example: 1,
     description: 'Lọc hoạt động theo ID vụ mùa (seasonId)',

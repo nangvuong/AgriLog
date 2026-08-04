@@ -1,7 +1,30 @@
-import { SourceType, AiStatus } from '../enums/activity.enum';
+import { SourceType, AiStatus, MediaType } from '../enums/activity.enum';
 import { IPaginationQuery } from './pagination.dto';
 import { IObservationDto, ICreateObservationDto } from './observation.dto';
 import { IHarvestDto, ICreateHarvestDto } from './harvest.dto';
+
+export interface IActivityMediaDto {
+  id: number;
+  activity_id: number;
+  media_type: MediaType;
+  file_name?: string;
+  file_url: string;
+  thumbnail_url?: string;
+  mime_type?: string;
+  file_size?: number;
+  duration?: number;
+  created_at: string | Date;
+}
+
+export interface ICreateActivityMediaDto {
+  media_type: MediaType;
+  file_name?: string;
+  file_url: string;
+  thumbnail_url?: string;
+  mime_type?: string;
+  file_size?: number;
+  duration?: number;
+}
 
 export interface IActivityTypeDto {
   id: number;
@@ -100,13 +123,18 @@ export interface IActivityDto {
   assets?: IActivityAssetDto[];
   observations?: IObservationDto[];
   harvests?: IHarvestDto[];
+  media?: IActivityMediaDto[];
   ai_extraction?: IActivityAiExtractionDto;
 }
 
 export interface ICreateActivityDto {
-  season_id: number;
-  farmer_id: number;
-  activity_type_id: number;
+  season_id?: number;
+  farmer_id?: number;
+  activity_type_id?: number;
+  plot_code?: string;
+  activity_type_code?: string;
+  activity_type?: string;
+  farmer_name?: string;
   description?: string;
   note?: string;
   start_time: string | Date;
@@ -119,6 +147,7 @@ export interface ICreateActivityDto {
   assets?: ICreateActivityAssetDto[];
   observations?: ICreateObservationDto[];
   harvests?: ICreateHarvestDto[];
+  media?: ICreateActivityMediaDto[];
   ai_extraction?: ICreateActivityAiExtractionDto;
 }
 
@@ -138,6 +167,7 @@ export interface IUpdateActivityDto {
   assets?: ICreateActivityAssetDto[];
   observations?: ICreateObservationDto[];
   harvests?: ICreateHarvestDto[];
+  media?: ICreateActivityMediaDto[];
 }
 
 export interface IActivityQueryDto extends IPaginationQuery {

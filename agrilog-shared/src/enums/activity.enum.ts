@@ -2,6 +2,7 @@ export enum SourceType {
   VOICE = 'VOICE',
   TEXT = 'TEXT',
   IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
   MANUAL = 'MANUAL',
 }
 

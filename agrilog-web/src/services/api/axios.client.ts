@@ -1,8 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Base API URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Base API URL (mặc định '/api' để tự động proxy qua Vite dev server hoặc nginx, tránh lỗi CORS & Mixed Content)
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

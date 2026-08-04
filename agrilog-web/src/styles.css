@@ -60,4 +60,61 @@
       radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 40%);
     min-height: 100vh;
   }
+
+  /* Chuẩn hóa chiều cao và padding cho input date / time / datetime-local trên mobile iOS/Android */
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 2.5rem;
+    max-height: 2.5rem;
+  }
+
+  input[type='date']::-webkit-datetime-edit,
+  input[type='time']::-webkit-datetime-edit,
+  input[type='datetime-local']::-webkit-datetime-edit {
+    padding: 0;
+    line-height: normal;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    margin-right: -4px;
+    cursor: pointer;
+  }
+
+  /* ===== Leaflet Map overrides ===== */
+  /* Fix z-index: map controls không bị đè bởi Tailwind/modal */
+  .leaflet-pane,
+  .leaflet-control {
+    z-index: 1 !important;
+  }
+  .leaflet-top,
+  .leaflet-bottom {
+    z-index: 2 !important;
+  }
+
+  /* Loại bỏ border mặc định của tile layer */
+  .leaflet-container {
+    background: #F7F2DF;
+    border-radius: 0.75rem;
+    outline: none;
+  }
+
+  /* Custom popup style AgriLog */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(28, 43, 30, 0.12) !important;
+    border: 1px solid #DCE0C4 !important;
+    padding: 0 !important;
+  }
+  .leaflet-popup-content {
+    margin: 0 !important;
+    line-height: 1.5 !important;
+  }
+  .leaflet-popup-tip-container {
+    display: none;
+  }
 }
